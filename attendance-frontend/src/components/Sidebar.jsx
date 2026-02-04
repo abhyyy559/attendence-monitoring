@@ -1,106 +1,167 @@
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard,
-    User,
     BookOpen,
-    CheckSquare,
+    Calendar,
     AlertTriangle,
     FileText,
+    User,
     Users,
     Settings,
-    LogOut
+    LogOut,
+    CheckSquare
 } from 'lucide-react';
 
 const Sidebar = () => {
     const { user, logout } = useAuth();
-    const location = useLocation();
+    const navigate = useNavigate();
 
-    const getMenuItems = () => {
-        const base = [
-            { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-            { name: 'Profile', icon: User, path: '/profile' },
-        ];
-
-        if (user?.role === 'student') {
-            return [
-                ...base,
-                { name: 'Attendance', icon: CheckSquare, path: '/student/attendance' },
-                { name: 'Courses', icon: BookOpen, path: '/student/courses' },
-                { name: 'Shortage Alerts', icon: AlertTriangle, path: '/student/shortage' },
-                { name: 'Reports', icon: FileText, path: '/student/reports' },
-            ];
-        }
-
-        if (user?.role === 'faculty') {
-            return [
-                ...base,
-                { name: 'Mark Attendance', icon: CheckSquare, path: '/mark-attendance' },
-                { name: 'My Courses', icon: BookOpen, path: '/faculty/courses' },
-                { name: 'History', icon: FileText, path: '/faculty/history' },
-            ];
-        }
-
-        if (user?.role === 'admin') {
-            return [
-                ...base,
-                { name: 'Users', icon: Users, path: '/admin/users' },
-                { name: 'Courses', icon: BookOpen, path: '/admin/courses' },
-                { name: 'Thresholds', icon: Settings, path: '/admin/threshold' },
-                { name: 'Reports', icon: FileText, path: '/admin/reports' },
-            ];
-        }
-
-        return base;
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
     };
 
-    const menuItems = getMenuItems();
+    const studentLinks = [
+        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/student/attendance', icon: Calendar, label: 'Attendance' },
+        { to: '/student/courses', icon: BookOpen, label: 'Courses' },
+        { to: '/student/shortage', icon: AlertTriangle, label: 'Shortage Alerts' },
+        { to: '/student/reports', icon: FileText, label: 'Reports' },
+    ];
+
+    const facultyLinks = [
+        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/mark-attendance', icon: CheckSquare, label: 'Mark Attendance' },
+        { to: '/faculty/courses', icon: BookOpen, label: 'My Courses' },
+        { to: '/faculty/history', icon: Calendar, label: 'History' },
+    ];
+
+    const adminLinks = [
+        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/admin/users', icon: Users, label: 'User Management' },
+        { to: '/admin/courses', icon: BookOpen, label: 'Courses' },
+        { to: '/admin/threshold', icon: Settings, label: 'Thresholds' },
+        { to: '/admin/reports', icon: FileText, label: 'Reports' },
+    ];
+
+    const links = user?.role === 'admin'
+        ? adminLinks
+        : user?.role === 'faculty'
+            ? facultyLinks
+            : studentLinks;
 
     return (
-        <aside className="w-60 h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0">
+        <div className="sidebar">
             {/* Logo */}
-            <div className="h-16 flex items-center px-6 border-b border-gray-200">
-                <h1 className="text-lg font-semibold text-gray-900">Attendance System</h1>
+            <div style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #e2e8f0'
+            }}>
+                <h1 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#0f172a',
+                    letterSpacing: '-0.025em'
+                }}>
+                    Attendance
+                </h1>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                {menuItems.map((item) => {
-                    const isActive = location.pathname === item.path;
-                    const Icon = item.icon;
+            <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
+                {links.map((link) => {
+                    const Icon = link.icon;
                     return (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            className={isActive ? 'sidebar-item-active' : 'sidebar-item'}
+                        <NavLink
+                            key={link.to}
+                            to={link.to}
+                            end={link.to === '/'}
+                            className={({ isActive }) =>
+                                isActive ? 'sidebar-item-active' : 'sidebar-item'
+                            }
                         >
                             <Icon size={18} />
-                            <span>{item.name}</span>
-                        </Link>
+                            <span>{link.label}</span>
+                        </NavLink>
                     );
                 })}
             </nav>
 
             {/* User Section */}
-            <div className="p-4 border-t border-gray-200">
-                <div className="flex items-center space-x-3 mb-3">
-                    <div className="w-9 h-9 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-medium">
-                        {user?.full_name?.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{user?.full_name}</p>
-                        <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
-                    </div>
-                </div>
-                <button
-                    onClick={logout}
-                    className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            <div style={{
+                padding: '16px',
+                borderTop: '1px solid #e2e8f0'
+            }}>
+                <NavLink
+                    to="/profile"
+                    className={({ isActive }) =>
+                        isActive ? 'sidebar-item-active' : 'sidebar-item'
+                    }
+                    style={{ marginBottom: '8px' }}
                 >
-                    <LogOut size={16} />
-                    <span>Sign out</span>
-                </button>
+                    <User size={18} />
+                    <span>Profile</span>
+                </NavLink>
+
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    marginTop: '8px'
+                }}>
+                    <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        backgroundColor: '#eef2ff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#4f46e5',
+                        fontWeight: '600',
+                        fontSize: '14px'
+                    }}>
+                        {user?.full_name?.charAt(0)?.toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#0f172a',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {user?.full_name}
+                        </p>
+                        <p style={{
+                            fontSize: '12px',
+                            color: '#64748b',
+                            textTransform: 'capitalize'
+                        }}>
+                            {user?.role}
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        style={{
+                            padding: '8px',
+                            color: '#64748b',
+                            background: 'none',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 150ms'
+                        }}
+                        title="Sign out"
+                    >
+                        <LogOut size={18} />
+                    </button>
+                </div>
             </div>
-        </aside>
+        </div>
     );
 };
 

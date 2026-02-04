@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { dashboardService } from '../services/api';
 import { Users, BookOpen, AlertTriangle, UserCheck } from 'lucide-react';
 
 const AdminDashboard = () => {
-    const { user } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -24,19 +22,46 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <p className="text-gray-500">Loading...</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+                <p style={{ color: '#64748b' }}>Loading...</p>
             </div>
         );
     }
 
-    const stats = [
-        { label: 'Total Students', value: data?.stats?.total_students || 0, icon: Users, color: 'blue' },
-        { label: 'Total Faculty', value: data?.stats?.total_faculty || 0, icon: UserCheck, color: 'green' },
-        { label: 'Total Courses', value: data?.stats?.total_courses || 0, icon: BookOpen, color: 'purple' },
-        { label: 'Shortage Alerts', value: data?.stats?.shortage_alerts || 0, icon: AlertTriangle, color: 'amber' },
+    const stats = data?.stats || {};
+
+    const statCards = [
+        {
+            label: 'Total Students',
+            value: stats.total_students || 0,
+            icon: Users,
+            color: '#4f46e5',
+            bg: '#eef2ff'
+        },
+        {
+            label: 'Total Faculty',
+            value: stats.total_faculty || 0,
+            icon: UserCheck,
+            color: '#10b981',
+            bg: '#ecfdf5'
+        },
+        {
+            label: 'Total Courses',
+            value: stats.total_courses || 0,
+            icon: BookOpen,
+            color: '#8b5cf6',
+            bg: '#f5f3ff'
+        },
+        {
+            label: 'Shortage Alerts',
+            value: stats.shortage_alerts || 0,
+            icon: AlertTriangle,
+            color: '#f59e0b',
+            bg: '#fffbeb'
+        },
     ];
 
+    // Sample department data
     const departments = [
         { name: 'Computer Science', students: 450, attendance: 85 },
         { name: 'Mechanical Engineering', students: 380, attendance: 78 },
@@ -45,39 +70,34 @@ const AdminDashboard = () => {
     ];
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Header */}
             <div>
                 <h1 className="page-title">Admin Dashboard</h1>
                 <p className="page-subtitle">System overview and management</p>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((stat, idx) => {
+            {/* Stats Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+                {statCards.map((stat, idx) => {
                     const Icon = stat.icon;
-                    const bgColor = {
-                        blue: 'bg-blue-100',
-                        green: 'bg-green-100',
-                        purple: 'bg-purple-100',
-                        amber: 'bg-amber-100'
-                    }[stat.color];
-                    const textColor = {
-                        blue: 'text-blue-600',
-                        green: 'text-green-600',
-                        purple: 'text-purple-600',
-                        amber: 'text-amber-600'
-                    }[stat.color];
-
                     return (
-                        <div key={idx} className="card">
-                            <div className="flex items-center space-x-3">
-                                <div className={`p-2 ${bgColor} rounded-md`}>
-                                    <Icon size={20} className={textColor} />
+                        <div key={idx} className="stat-card">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '10px',
+                                    backgroundColor: stat.bg,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <Icon size={20} style={{ color: stat.color }} />
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-500">{stat.label}</p>
-                                    <p className="text-xl font-semibold text-gray-900">{stat.value}</p>
+                                    <p className="stat-value">{stat.value}</p>
+                                    <p className="stat-label">{stat.label}</p>
                                 </div>
                             </div>
                         </div>
@@ -85,68 +105,69 @@ const AdminDashboard = () => {
                 })}
             </div>
 
-            {/* Department Overview */}
-            <div className="card">
-                <div className="card-header">
-                    <h2 className="card-title">Department Attendance</h2>
-                </div>
-                <div className="space-y-4">
-                    {departments.map((dept, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900">{dept.name}</p>
-                                <p className="text-xs text-gray-500">{dept.students} students</p>
-                            </div>
-                            <div className="flex items-center space-x-4 ml-4">
-                                <div className="w-32">
-                                    <div className="progress-bar">
-                                        <div
-                                            className={`progress-bar-fill ${dept.attendance < 75 ? 'bg-amber-500' : 'bg-green-500'}`}
-                                            style={{ width: `${dept.attendance}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                                <span className={`text-sm font-medium w-12 text-right ${dept.attendance < 75 ? 'text-amber-600' : 'text-green-600'}`}>
-                                    {dept.attendance}%
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Two Column Layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+                {/* Department Overview */}
                 <div className="card">
-                    <h3 className="text-sm font-medium text-gray-900 mb-3">Quick Actions</h3>
-                    <div className="space-y-2">
-                        <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md border border-gray-200">
-                            Generate Shortage Report
-                        </button>
-                        <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md border border-gray-200">
-                            Export Attendance Data
-                        </button>
-                        <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md border border-gray-200">
-                            Configure Thresholds
-                        </button>
+                    <div className="card-header">
+                        <h2 className="card-title">Department Attendance</h2>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {departments.map((dept, idx) => (
+                            <div key={idx} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}>
+                                <div style={{ minWidth: '200px' }}>
+                                    <p style={{ fontWeight: '500', color: '#0f172a' }}>{dept.name}</p>
+                                    <p style={{ fontSize: '13px', color: '#64748b' }}>{dept.students} students</p>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, marginLeft: '24px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div className="progress-bar">
+                                            <div
+                                                className="progress-bar-fill"
+                                                style={{
+                                                    width: `${dept.attendance}%`,
+                                                    backgroundColor: dept.attendance < 75 ? '#f59e0b' : '#10b981'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <span style={{
+                                        width: '45px',
+                                        fontWeight: '600',
+                                        fontSize: '14px',
+                                        color: dept.attendance < 75 ? '#d97706' : '#059669',
+                                        textAlign: 'right'
+                                    }}>
+                                        {dept.attendance}%
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
+                {/* Quick Actions */}
                 <div className="card">
-                    <h3 className="text-sm font-medium text-gray-900 mb-3">System Status</h3>
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Database</span>
-                            <span className="badge-success">Online</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">API Server</span>
-                            <span className="badge-success">Online</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Last Sync</span>
-                            <span className="text-sm text-gray-500">Just now</span>
-                        </div>
+                    <div className="card-header">
+                        <h2 className="card-title">Quick Actions</h2>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <button className="btn-secondary" style={{ justifyContent: 'flex-start', width: '100%' }}>
+                            Generate Shortage Report
+                        </button>
+                        <button className="btn-secondary" style={{ justifyContent: 'flex-start', width: '100%' }}>
+                            Export Attendance Data
+                        </button>
+                        <button className="btn-secondary" style={{ justifyContent: 'flex-start', width: '100%' }}>
+                            Configure Thresholds
+                        </button>
+                        <button className="btn-secondary" style={{ justifyContent: 'flex-start', width: '100%' }}>
+                            Add New Course
+                        </button>
                     </div>
                 </div>
             </div>

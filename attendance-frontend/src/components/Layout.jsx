@@ -1,38 +1,70 @@
 import Sidebar from './Sidebar';
-import { Bell, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Bell } from 'lucide-react';
 
 const Layout = ({ children }) => {
     const { user } = useAuth();
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
+        <div style={{ display: 'flex', minHeight: '100vh' }}>
             <Sidebar />
 
-            <div className="flex-1 ml-60 flex flex-col">
+            <div style={{
+                flex: 1,
+                marginLeft: '260px',
+                backgroundColor: '#f8fafc'
+            }}>
                 {/* Header */}
-                <header className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between sticky top-0 z-10">
+                <header style={{
+                    height: '64px',
+                    backgroundColor: 'white',
+                    borderBottom: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 32px'
+                }}>
                     <div>
-                        <p className="text-sm text-gray-500">Welcome back,</p>
-                        <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+                        <p style={{ fontSize: '14px', color: '#64748b' }}>
+                            Welcome back,{' '}
+                            <span style={{ color: '#0f172a', fontWeight: '500' }}>
+                                {user?.full_name}
+                            </span>
+                        </p>
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                        <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors relative">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <button style={{
+                            position: 'relative',
+                            padding: '8px',
+                            color: '#64748b',
+                            background: 'none',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer'
+                        }}>
                             <Bell size={20} />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
-                        <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors">
-                            <User size={20} />
+                            <span style={{
+                                position: 'absolute',
+                                top: '6px',
+                                right: '6px',
+                                width: '8px',
+                                height: '8px',
+                                backgroundColor: '#f43f5e',
+                                borderRadius: '50%',
+                                border: '2px solid white'
+                            }} />
                         </button>
                     </div>
                 </header>
 
                 {/* Main Content */}
-                <main className="flex-1 p-6">
-                    <div className="max-w-6xl mx-auto">
-                        {children}
-                    </div>
+                <main style={{
+                    padding: '32px',
+                    maxWidth: '1280px',
+                    margin: '0 auto'
+                }}>
+                    {children}
                 </main>
             </div>
         </div>

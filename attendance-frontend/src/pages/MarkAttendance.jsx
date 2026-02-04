@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Check } from 'lucide-react';
 
 const MarkAttendance = () => {
     const navigate = useNavigate();
@@ -18,7 +18,7 @@ const MarkAttendance = () => {
         const fetchCourses = async () => {
             try {
                 const response = await api.get('/api/dashboard/faculty');
-                setCourses(response.data.courses);
+                setCourses(response.data.courses || []);
             } catch (error) {
                 toast.error("Failed to load courses");
             } finally {
@@ -82,19 +82,37 @@ const MarkAttendance = () => {
         }
     };
 
+    const statusOptions = [
+        { value: 'present', label: 'Present', color: '#10b981' },
+        { value: 'absent', label: 'Absent', color: '#f43f5e' },
+        { value: 'late', label: 'Late', color: '#f59e0b' },
+        { value: 'excused', label: 'Excused', color: '#6366f1' },
+    ];
+
     if (loading && courses.length === 0) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <p className="text-gray-500">Loading...</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+                <p style={{ color: '#64748b' }}>Loading...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex items-center space-x-4">
-                <Link to="/" className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <Link
+                    to="/"
+                    style={{
+                        padding: '8px',
+                        color: '#64748b',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 150ms'
+                    }}
+                >
                     <ChevronLeft size={20} />
                 </Link>
                 <div>
@@ -105,13 +123,22 @@ const MarkAttendance = () => {
 
             {/* Selection Form */}
             <div className="card">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '24px', alignItems: 'flex-end' }}>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+                        <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#334155',
+                            marginBottom: '8px'
+                        }}>
+                            Course
+                        </label>
                         <select
                             value={selectedCourse}
                             onChange={(e) => handleCourseSelect(e.target.value)}
                             className="input-field"
+                            style={{ cursor: 'pointer' }}
                         >
                             <option value="">Select a course</option>
                             {courses.map(c => (
@@ -123,7 +150,15 @@ const MarkAttendance = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                        <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#334155',
+                            marginBottom: '8px'
+                        }}>
+                            Date
+                        </label>
                         <input
                             type="date"
                             value={selectedDate}
@@ -133,20 +168,22 @@ const MarkAttendance = () => {
                         />
                     </div>
 
-                    <div className="flex items-end space-x-2">
+                    <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                             onClick={() => handleMarkAll('present')}
                             disabled={students.length === 0}
-                            className="btn-secondary text-xs"
+                            className="btn-secondary"
+                            style={{ fontSize: '13px', padding: '8px 12px' }}
                         >
-                            Mark All Present
+                            All Present
                         </button>
                         <button
                             onClick={() => handleMarkAll('absent')}
                             disabled={students.length === 0}
-                            className="btn-secondary text-xs"
+                            className="btn-secondary"
+                            style={{ fontSize: '13px', padding: '8px 12px' }}
                         >
-                            Mark All Absent
+                            All Absent
                         </button>
                     </div>
                 </div>
@@ -158,46 +195,48 @@ const MarkAttendance = () => {
                     <table className="table">
                         <thead>
                             <tr>
-                                <th>Roll No</th>
-                                <th>Name</th>
+                                <th>Roll Number</th>
+                                <th>Student Name</th>
                                 <th>Status</th>
-                                <th>Remarks</th>
                             </tr>
                         </thead>
                         <tbody>
                             {students.map((student) => (
                                 <tr key={student.student_id}>
-                                    <td className="font-medium">{student.roll_number}</td>
+                                    <td style={{ fontWeight: '500' }}>{student.roll_number}</td>
                                     <td>{student.full_name}</td>
                                     <td>
-                                        <div className="flex items-center space-x-4">
-                                            {['present', 'absent', 'late', 'excused'].map((status) => (
-                                                <label key={status} className="flex items-center space-x-1 cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name={`status-${student.student_id}`}
-                                                        value={status}
-                                                        checked={attendance[student.student_id] === status}
-                                                        onChange={() => handleStatusChange(student.student_id, status)}
-                                                        className="text-blue-600"
-                                                    />
-                                                    <span className="text-sm capitalize">{status}</span>
-                                                </label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            {statusOptions.map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => handleStatusChange(student.student_id, option.value)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        fontSize: '13px',
+                                                        fontWeight: '500',
+                                                        borderRadius: '6px',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 150ms',
+                                                        backgroundColor: attendance[student.student_id] === option.value
+                                                            ? option.color
+                                                            : '#f1f5f9',
+                                                        color: attendance[student.student_id] === option.value
+                                                            ? 'white'
+                                                            : '#64748b'
+                                                    }}
+                                                >
+                                                    {option.label}
+                                                </button>
                                             ))}
                                         </div>
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            placeholder="Optional"
-                                            className="input-field py-1 text-sm"
-                                        />
                                     </td>
                                 </tr>
                             ))}
                             {students.length === 0 && (
                                 <tr>
-                                    <td colSpan="4" className="text-center text-gray-500 py-8">
+                                    <td colSpan="3" style={{ textAlign: 'center', padding: '48px', color: '#64748b' }}>
                                         No students enrolled in this course
                                     </td>
                                 </tr>
@@ -206,13 +245,20 @@ const MarkAttendance = () => {
                     </table>
 
                     {students.length > 0 && (
-                        <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <div style={{
+                            padding: '16px 24px',
+                            borderTop: '1px solid #e2e8f0',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '12px'
+                        }}>
                             <Link to="/" className="btn-secondary">Cancel</Link>
                             <button
                                 onClick={handleSubmit}
                                 disabled={submitting}
                                 className="btn-primary"
                             >
+                                <Check size={18} />
                                 {submitting ? 'Saving...' : 'Save Attendance'}
                             </button>
                         </div>

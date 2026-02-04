@@ -9,7 +9,7 @@ const StudentAttendance = () => {
     useEffect(() => {
         const fetchAttendance = async () => {
             try {
-                // For now, show message about no data
+                // For now, show empty state
                 setAttendance([]);
             } catch (error) {
                 console.error(error);
@@ -22,55 +22,76 @@ const StudentAttendance = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <p className="text-gray-500">Loading...</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+                <p style={{ color: '#64748b' }}>Loading...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header */}
             <div>
-                <h1 className="page-title">View Attendance</h1>
+                <h1 className="page-title">Attendance History</h1>
                 <p className="page-subtitle">Your attendance records across all courses</p>
             </div>
 
-            <div className="card">
-                <div className="card-header">
-                    <h2 className="card-title">Attendance Records</h2>
+            {/* Table */}
+            <div className="table-container">
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0' }}>
+                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a' }}>
+                        Recent Records
+                    </h2>
                 </div>
 
                 {attendance.length === 0 ? (
-                    <div className="text-center py-12">
-                        <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
-                        <p className="text-gray-500">No attendance records yet</p>
-                        <p className="text-sm text-gray-400 mt-1">Your attendance will appear here once marked by faculty</p>
+                    <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+                        <Calendar size={48} style={{ color: '#cbd5e1', marginBottom: '16px' }} />
+                        <p style={{ fontSize: '16px', fontWeight: '500', color: '#0f172a' }}>
+                            No attendance records yet
+                        </p>
+                        <p style={{ fontSize: '14px', color: '#64748b', marginTop: '8px' }}>
+                            Your attendance will appear here once marked by faculty
+                        </p>
                     </div>
                 ) : (
-                    <div className="table-container">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Course</th>
-                                    <th>Status</th>
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Course</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {attendance.map((record, idx) => (
+                                <tr key={idx}>
+                                    <td style={{ fontWeight: '500' }}>{record.date}</td>
+                                    <td>{record.course}</td>
+                                    <td>
+                                        {record.status === 'present' && (
+                                            <span className="badge-success">
+                                                <CheckCircle size={14} style={{ marginRight: '4px' }} />
+                                                Present
+                                            </span>
+                                        )}
+                                        {record.status === 'absent' && (
+                                            <span className="badge-danger">
+                                                <XCircle size={14} style={{ marginRight: '4px' }} />
+                                                Absent
+                                            </span>
+                                        )}
+                                        {record.status === 'late' && (
+                                            <span className="badge-warning">
+                                                <Clock size={14} style={{ marginRight: '4px' }} />
+                                                Late
+                                            </span>
+                                        )}
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {attendance.map((record, idx) => (
-                                    <tr key={idx}>
-                                        <td>{record.date}</td>
-                                        <td>{record.course}</td>
-                                        <td>
-                                            {record.status === 'present' && <span className="badge-success">Present</span>}
-                                            {record.status === 'absent' && <span className="badge-danger">Absent</span>}
-                                            {record.status === 'late' && <span className="badge-warning">Late</span>}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </table>
                 )}
             </div>
         </div>

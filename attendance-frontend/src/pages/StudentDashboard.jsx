@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { dashboardService } from '../services/api';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, BookOpen, CheckCircle, XCircle } from 'lucide-react';
+import { BookOpen, TrendingUp, AlertTriangle } from 'lucide-react';
 
 const StudentDashboard = () => {
-    const { user } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -15,7 +12,7 @@ const StudentDashboard = () => {
                 const response = await dashboardService.getStudentData();
                 setData(response.data);
             } catch (error) {
-                console.error("Error fetching student dashboard data", error);
+                console.error("Error fetching student data", error);
             } finally {
                 setLoading(false);
             }
@@ -25,132 +22,181 @@ const StudentDashboard = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <p className="text-gray-500">Loading...</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+                <p style={{ color: '#64748b' }}>Loading...</p>
             </div>
         );
     }
 
-    const worstCourse = data?.courses?.length > 0
-        ? data.courses.reduce((prev, curr) => (prev.percentage < curr.percentage) ? prev : curr)
-        : null;
-
-    const totalCourses = data?.courses?.length || 0;
-    const presentCount = data?.courses?.filter(c => !c.shortage).length || 0;
-    const shortageCount = data?.courses?.filter(c => c.shortage).length || 0;
+    const courses = data?.courses || [];
+    const overallPercentage = data?.overall_percentage || 0;
+    const onTrack = courses.filter(c => !c.shortage).length;
+    const shortage = courses.filter(c => c.shortage).length;
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Header */}
             <div>
                 <h1 className="page-title">Dashboard</h1>
-                <p className="page-subtitle">Welcome back, {user?.full_name}</p>
+                <p className="page-subtitle">Your attendance overview</p>
             </div>
 
             {/* Overall Attendance Card */}
-            <div className="card text-center">
-                <p className="text-sm text-gray-500 mb-2">Overall Attendance</p>
-                <p className="text-5xl font-semibold text-gray-900">{data?.overall_percentage || 0}%</p>
-                <p className="text-sm text-gray-500 mt-2">
-                    {data?.overall_percentage >= 75 ? (
-                        <span className="text-green-600">You are meeting the attendance requirement</span>
-                    ) : (
-                        <span className="text-red-600">You are below the 75% requirement</span>
-                    )}
-                </p>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="card">
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-blue-100 rounded-md">
-                            <BookOpen size={20} className="text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500">Total Courses</p>
-                            <p className="text-xl font-semibold text-gray-900">{totalCourses}</p>
-                        </div>
+            <div className="card" style={{
+                background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                border: 'none',
+                color: 'white'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <p style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>
+                            Overall Attendance
+                        </p>
+                        <p style={{ fontSize: '48px', fontWeight: '600', letterSpacing: '-0.025em' }}>
+                            {overallPercentage}%
+                        </p>
+                        <p style={{ fontSize: '14px', marginTop: '8px', opacity: 0.9 }}>
+                            {overallPercentage >= 75
+                                ? '✓ You are meeting the 75% requirement'
+                                : '⚠ Below 75% minimum requirement'}
+                        </p>
                     </div>
-                </div>
-
-                <div className="card">
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-green-100 rounded-md">
-                            <CheckCircle size={20} className="text-green-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500">On Track</p>
-                            <p className="text-xl font-semibold text-gray-900">{presentCount}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="card">
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-red-100 rounded-md">
-                            <XCircle size={20} className="text-red-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500">Shortage</p>
-                            <p className="text-xl font-semibold text-gray-900">{shortageCount}</p>
-                        </div>
+                    <div style={{
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '50%',
+                        border: '8px solid rgba(255,255,255,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <span style={{ fontSize: '32px', fontWeight: '700' }}>{overallPercentage}%</span>
                     </div>
                 </div>
             </div>
 
-            {/* Course List */}
+            {/* Stats Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+                <div className="stat-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            backgroundColor: '#eef2ff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <BookOpen size={20} style={{ color: '#4f46e5' }} />
+                        </div>
+                        <div>
+                            <p className="stat-value">{courses.length}</p>
+                            <p className="stat-label">Total Courses</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            backgroundColor: '#ecfdf5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <TrendingUp size={20} style={{ color: '#10b981' }} />
+                        </div>
+                        <div>
+                            <p className="stat-value">{onTrack}</p>
+                            <p className="stat-label">On Track</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            backgroundColor: '#fff1f2',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <AlertTriangle size={20} style={{ color: '#f43f5e' }} />
+                        </div>
+                        <div>
+                            <p className="stat-value">{shortage}</p>
+                            <p className="stat-label">Shortage</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Courses List */}
             <div className="card">
                 <div className="card-header">
                     <h2 className="card-title">Course-wise Attendance</h2>
                 </div>
-                <div className="space-y-4">
-                    {data?.courses?.map((course, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                    {course.course_name}
-                                </p>
-                                <p className="text-xs text-gray-500">{course.course_code}</p>
-                            </div>
-                            <div className="flex items-center space-x-4 ml-4">
-                                <div className="w-32">
-                                    <div className="progress-bar">
-                                        <div
-                                            className={`progress-bar-fill ${course.shortage ? 'bg-red-500' : 'bg-green-500'}`}
-                                            style={{ width: `${course.percentage}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                                <span className={`text-sm font-medium w-12 text-right ${course.shortage ? 'text-red-600' : 'text-green-600'}`}>
-                                    {course.percentage}%
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                    {(!data?.courses || data.courses.length === 0) && (
-                        <p className="text-sm text-gray-500 text-center py-4">No courses enrolled</p>
-                    )}
-                </div>
-            </div>
 
-            {/* Shortage Alerts */}
-            {shortageCount > 0 && (
-                <div className="card border-amber-200 bg-amber-50">
-                    <div className="flex items-start space-x-3">
-                        <AlertTriangle size={20} className="text-amber-600 mt-0.5" />
-                        <div>
-                            <h3 className="text-sm font-medium text-amber-800">Shortage Alert</h3>
-                            <p className="text-sm text-amber-700 mt-1">
-                                You have shortage in {shortageCount} course(s). Minimum 75% attendance is required.
-                            </p>
-                            <Link to="/student/shortage" className="text-sm text-amber-800 font-medium underline mt-2 inline-block">
-                                View details →
-                            </Link>
-                        </div>
+                {courses.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                        <BookOpen size={48} style={{ color: '#cbd5e1', marginBottom: '16px' }} />
+                        <p style={{ color: '#64748b' }}>No courses enrolled yet</p>
                     </div>
-                </div>
-            )}
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {courses.map((course, idx) => (
+                            <div key={idx} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '16px',
+                                backgroundColor: '#f8fafc',
+                                borderRadius: '10px'
+                            }}>
+                                <div style={{ flex: 1 }}>
+                                    <p style={{ fontWeight: '500', color: '#0f172a' }}>
+                                        {course.course_name}
+                                    </p>
+                                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                                        {course.course_code}
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                    <div style={{ width: '200px' }}>
+                                        <div className="progress-bar">
+                                            <div
+                                                className="progress-bar-fill"
+                                                style={{
+                                                    width: `${course.percentage}%`,
+                                                    backgroundColor: course.shortage ? '#f43f5e' : '#10b981'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <span style={{
+                                        width: '50px',
+                                        fontWeight: '600',
+                                        color: course.shortage ? '#e11d48' : '#059669',
+                                        textAlign: 'right'
+                                    }}>
+                                        {course.percentage}%
+                                    </span>
+                                    {course.shortage && (
+                                        <span className="badge-danger">Low</span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
