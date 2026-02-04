@@ -11,6 +11,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    semester: Optional[int] = None
 
 class UserResponse(UserBase):
     user_id: UUID

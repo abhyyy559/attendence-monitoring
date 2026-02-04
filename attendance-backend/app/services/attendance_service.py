@@ -20,9 +20,17 @@ class AttendanceService:
         Note: Percentage calculation is handled by DB triggers.
         """
         for record in attendance_data:
+            # Handle both dict and object
+            s_id = record.get('student_id') if isinstance(record, dict) else getattr(record, 'student_id', None)
+            status = record.get('status') if isinstance(record, dict) else getattr(record, 'status', None)
+            remarks = record.get('remarks') if isinstance(record, dict) else getattr(record, 'remarks', None)
+            
+            if not s_id:
+                continue
+
             # Find enrollment
             enrollment = db.query(CourseEnrollment).filter(
-                CourseEnrollment.student_id == record.student_id,
+                CourseEnrollment.student_id == s_id,
                 CourseEnrollment.course_id == course_id
             ).first()
             
@@ -36,16 +44,16 @@ class AttendanceService:
             ).first()
             
             if db_record:
-                db_record.status = record.status
-                db_record.remarks = record.remarks
+                db_record.status = status
+                db_record.remarks = remarks
                 db_record.marked_by = marked_by
             else:
                 db_record = AttendanceRecord(
                     enrollment_id=enrollment.enrollment_id,
                     class_date=class_date,
-                    status=record.status,
+                    status=status,
                     marked_by=marked_by,
-                    remarks=record.remarks
+                    remarks=remarks
                 )
                 db.add(db_record)
         

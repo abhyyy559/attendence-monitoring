@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 import datetime
+import traceback
 from app.database import get_db
 from app.models.user import User
 from app.models.student import Student
@@ -70,72 +71,77 @@ def get_faculty_dashboard(db: Session = Depends(get_db), current_user: User = De
     if current_user.role != "faculty":
         raise HTTPException(status_code=403, detail="Not a faculty member")
         
-    faculty = db.query(Faculty).filter(Faculty.user_id == current_user.user_id).first()
-    if not faculty:
-        # Return empty dashboard if profile doesn't exist yet
-        return {
-            "faculty_info": {
-                "employee_id": "Not Set",
-                "department": "Not Set"
-            },
-            "courses": []
-        }
+    try:
+        # Resolve faculty_id
+        faculty = db.query(Faculty).filter(Faculty.user_id == current_user.user_id).first()
+        if not faculty:
+            return {
+                "faculty_info": {"employee_id": "Not Set", "department": "Not Set"},
+                "courses": [],
+                "stats": {"total_students": 0, "avg_attendance": 0, "total_courses": 0},
+                "daily_activity": []
+            }
+            
+        # Get courses
+        courses_query = db.query(
+            Course, 
+            func.count(CourseEnrollment.enrollment_id).label("student_count"),
+            func.avg(AttendanceSummary.attendance_percentage).label("avg_attendance")
+        ).join(
+            CourseEnrollment, Course.course_id == CourseEnrollment.course_id
+        ).outerjoin(
+            AttendanceSummary, CourseEnrollment.enrollment_id == AttendanceSummary.enrollment_id
+        ).filter(CourseEnrollment.faculty_id == faculty.faculty_id).group_by(Course.course_id).all()
         
-    # Get courses assigned to this faculty with performance
-    courses_query = db.query(
-        Course, 
-        func.count(CourseEnrollment.enrollment_id).label("student_count"),
-        func.avg(AttendanceSummary.attendance_percentage).label("avg_attendance")
-    ).join(
-        CourseEnrollment, Course.course_id == CourseEnrollment.course_id
-    ).join(
-        AttendanceSummary, CourseEnrollment.enrollment_id == AttendanceSummary.enrollment_id
-    ).filter(CourseEnrollment.faculty_id == faculty.faculty_id).group_by(Course.course_id).all()
-    
-    courses_data = []
-    for course, count, avg_att in courses_query:
-        courses_data.append({
-            "course_id": str(course.course_id),
-            "course_name": course.course_name,
-            "course_code": course.course_code,
-            "student_count": count,
-            "avg_attendance": round(float(avg_att or 0), 1)
-        })
-    
-    # Daily activity trend (last 7 days)
-    today = datetime.date.today()
-    activity_trend = []
-    for i in range(6, -1, -1):
-        target_date = today - datetime.timedelta(days=i)
+        courses_data = []
+        for course, count, avg_att in courses_query:
+            courses_data.append({
+                "course_id": str(course.course_id),
+                "course_name": course.course_name,
+                "course_code": course.course_code,
+                "student_count": count,
+                "avg_attendance": round(float(avg_att or 0), 1)
+            })
         
-        counts = db.query(
-            func.count(AttendanceRecord.attendance_id).label("total"),
-            func.sum(case((AttendanceRecord.status == "present", 1), (AttendanceRecord.status == "late", 1), else_=0)).label("present"),
+        # Daily activity trend
+        today = datetime.date.today()
+        last_7_days = today - datetime.timedelta(days=6)
+        
+        activity_records = db.query(
+            AttendanceRecord.class_date,
+            func.sum(case((AttendanceRecord.status.in_(["present", "late"]), 1), else_=0)).label("present"),
             func.sum(case((AttendanceRecord.status == "absent", 1), else_=0)).label("absent")
         ).filter(
             AttendanceRecord.marked_by == faculty.faculty_id,
-            AttendanceRecord.class_date == target_date
-        ).first()
+            AttendanceRecord.class_date >= last_7_days
+        ).group_by(AttendanceRecord.class_date).all()
         
-        activity_trend.append({
-            "date": target_date.strftime("%b %d"),
-            "present": int(counts.present or 0),
-            "absent": int(counts.absent or 0)
-        })
+        activity_map = {r.class_date: {"present": int(r.present or 0), "absent": int(r.absent or 0)} for r in activity_records}
         
-    return {
-        "faculty_info": {
-            "employee_id": faculty.employee_id,
-            "department": faculty.department
-        },
-        "courses": courses_data,
-        "stats": {
-            "total_students": sum(c['student_count'] for c in courses_data),
-            "avg_attendance": round(sum(c['avg_attendance'] for c in courses_data) / len(courses_data), 1) if courses_data else 0,
-            "total_courses": len(courses_data)
-        },
-        "daily_activity": activity_trend
-    }
+        activity_trend = []
+        for i in range(6, -1, -1):
+            target_date = today - datetime.timedelta(days=i)
+            data_point = activity_map.get(target_date, {"present": 0, "absent": 0})
+            activity_trend.append({
+                "date": target_date.strftime("%b %d"),
+                "present": data_point["present"],
+                "absent": data_point["absent"]
+            })
+            
+        return {
+            "faculty_info": {"employee_id": faculty.employee_id, "department": faculty.department},
+            "courses": courses_data,
+            "stats": {
+                "total_students": sum(c['student_count'] for c in courses_data),
+                "avg_attendance": round(sum(c['avg_attendance'] for c in courses_data) / len(courses_data), 1) if courses_data else 0,
+                "total_courses": len(courses_data)
+            },
+            "daily_activity": activity_trend
+        }
+    except Exception as e:
+        print(f"CRITICAL DASHBOARD ERROR: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/admin")
 def get_admin_dashboard(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

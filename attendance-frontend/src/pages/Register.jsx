@@ -12,7 +12,8 @@ const Register = () => {
         confirmPassword: '',
         full_name: '',
         phone: '',
-        role: 'student'
+        role: 'student',
+        semester: 1
     });
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -34,7 +35,8 @@ const Register = () => {
                 password: formData.password,
                 full_name: formData.full_name,
                 phone: formData.phone || null,
-                role: formData.role
+                role: formData.role,
+                semester: formData.role === 'student' ? parseInt(formData.semester) : null
             });
             toast.success('Onboarding complete! You can now sign in.');
             navigate('/login');
@@ -88,6 +90,27 @@ const Register = () => {
                                 </select>
                             </div>
                         </div>
+
+                        {formData.role === 'student' && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden' }}
+                            >
+                                <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155', textTransform: 'uppercase' }}>Current Semester</label>
+                                <select
+                                    name="semester"
+                                    value={formData.semester}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    style={{ backgroundColor: '#f0fdf4', borderColor: '#86efac' }}
+                                >
+                                    {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                                        <option key={s} value={s}>Semester {s}</option>
+                                    ))}
+                                </select>
+                            </motion.div>
+                        )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155', textTransform: 'uppercase' }}>Institutional Email</label>

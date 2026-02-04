@@ -19,12 +19,16 @@ def mark_bulk_attendance(data: BulkAttendanceCreate, db: Session = Depends(get_d
     if current_user.role not in ["faculty", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    from app.models.faculty import Faculty
+    faculty = db.query(Faculty).filter(Faculty.user_id == current_user.user_id).first()
+    faculty_id = faculty.faculty_id if faculty else None
+
     return attendance_service.mark_attendance(
         db=db,
         course_id=data.course_id,
         class_date=data.class_date,
         attendance_data=data.attendance_data,
-        marked_by=current_user.user_id
+        marked_by=faculty_id
     )
 
 @router.get("/student/{student_id}", response_model=List[AttendanceSummaryResponse])

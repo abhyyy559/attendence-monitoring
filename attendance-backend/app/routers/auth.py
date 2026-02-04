@@ -38,7 +38,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
             user_id=db_user.user_id,
             roll_number=f"STU{str(db_user.user_id)[:8].upper()}",
             department="Not Set",
-            semester=1,
+            semester=user.semester if user.semester else 1,
             batch_year=date.today().year,
             enrollment_date=date.today()
         )
