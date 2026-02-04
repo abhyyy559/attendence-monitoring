@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { AlertTriangle, TrendingDown } from 'lucide-react';
+import { AlertTriangle, TrendingDown, CheckCircle, ArrowRight, ShieldAlert } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ShortageAlerts = () => {
     const [courses, setCourses] = useState([]);
@@ -23,112 +24,145 @@ const ShortageAlerts = () => {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
-                <p style={{ color: '#64748b' }}>Loading...</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px', gap: '16px' }}>
+                <div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#f43f5e', borderRadius: '50%' }} />
+                <p style={{ color: '#64748b' }}>Checking shortage status...</p>
             </div>
         );
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+        >
             {/* Header */}
-            <div>
-                <h1 className="page-title">Shortage Alerts</h1>
-                <p className="page-subtitle">Courses where your attendance is below 75%</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                    <h1 className="page-title">Shortage Alerts</h1>
+                    <p className="page-subtitle">Critical courses requiring immediate attendance improvement.</p>
+                </div>
+                <div className="badge-danger" style={{ padding: '8px 16px', borderRadius: '10px' }}>
+                    Critical Threshold: 75%
+                </div>
             </div>
 
-            {courses.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
-                    <div style={{
-                        width: '64px',
-                        height: '64px',
-                        borderRadius: '50%',
-                        backgroundColor: '#ecfdf5',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 20px'
-                    }}>
-                        <AlertTriangle size={28} style={{ color: '#10b981' }} />
-                    </div>
-                    <p style={{ fontSize: '16px', fontWeight: '500', color: '#0f172a' }}>
-                        No shortage alerts!
-                    </p>
-                    <p style={{ fontSize: '14px', color: '#64748b', marginTop: '8px' }}>
-                        Your attendance is above 75% in all courses
-                    </p>
-                </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {courses.map((course, idx) => (
-                        <div
-                            key={idx}
-                            className="card"
-                            style={{
-                                borderColor: '#fecaca',
-                                backgroundColor: '#fef2f2'
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                                <div style={{
-                                    width: '44px',
-                                    height: '44px',
-                                    borderRadius: '12px',
-                                    backgroundColor: '#fee2e2',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0
-                                }}>
-                                    <TrendingDown size={22} style={{ color: '#e11d48' }} />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <h3 style={{ fontWeight: '600', color: '#0f172a' }}>
-                                        {course.course_name}
-                                    </h3>
-                                    <p style={{ fontSize: '14px', color: '#64748b', marginTop: '2px' }}>
-                                        {course.course_code}
-                                    </p>
+            <AnimatePresence>
+                {courses.length === 0 ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="card empty-state"
+                        style={{ border: '1px dashed #e2e8f0' }}
+                    >
+                        <div className="empty-state-icon" style={{ backgroundColor: '#ecfdf5', color: '#10b981' }}>
+                            <CheckCircle size={32} />
+                        </div>
+                        <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0f172a' }}>All Clear!</h2>
+                        <p style={{ fontSize: '14px', color: '#64748b', maxWidth: '300px' }}>
+                            Awesome! You don't have any shortage alerts. Keep maintaining this consistency!
+                        </p>
+                        <button className="btn-primary" style={{ marginTop: '12px', backgroundColor: '#10b981' }}>
+                            View Full Attendance
+                        </button>
+                    </motion.div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {courses.map((course, idx) => (
+                            <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className="card"
+                                style={{
+                                    borderLeft: '4px solid #f43f5e',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
                                     <div style={{
+                                        width: '56px',
+                                        height: '56px',
+                                        borderRadius: '16px',
+                                        backgroundColor: '#fff1f2',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '16px',
-                                        marginTop: '16px'
+                                        justifyContent: 'center',
+                                        flexShrink: 0
                                     }}>
-                                        <div style={{ flex: 1 }}>
-                                            <div className="progress-bar">
+                                        <ShieldAlert size={28} style={{ color: '#e11d48' }} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <div>
+                                                <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>
+                                                    {course.course_name}
+                                                </h3>
+                                                <p style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                                                    {course.course_code}
+                                                </p>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <span style={{ fontSize: '24px', fontWeight: '800', color: '#e11d48' }}>
+                                                    {course.percentage}%
+                                                </span>
+                                                <p style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>
+                                                    Current Status
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ marginTop: '20px' }}>
+                                            <div className="progress-bar" style={{ height: '8px', backgroundColor: '#f1f5f9' }}>
                                                 <div
                                                     className="progress-bar-fill"
                                                     style={{
                                                         width: `${course.percentage}%`,
-                                                        backgroundColor: '#f43f5e'
+                                                        backgroundColor: '#f43f5e',
+                                                        boxShadow: '0 0 8px rgba(244, 63, 94, 0.3)'
                                                     }}
                                                 />
                                             </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: '#f43f5e', fontWeight: '600' }}>
+                                                    Below 75% threshold
+                                                </span>
+                                                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                                    Target: 75%
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span style={{
-                                            fontWeight: '700',
-                                            color: '#e11d48',
-                                            fontSize: '18px'
+
+                                        <div style={{
+                                            marginTop: '24px',
+                                            padding: '12px 16px',
+                                            backgroundColor: '#fef2f2',
+                                            borderRadius: '10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between'
                                         }}>
-                                            {course.percentage}%
-                                        </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <TrendingDown size={18} style={{ color: '#e11d48' }} />
+                                                <span style={{ fontSize: '13px', color: '#991b1b', fontWeight: '500' }}>
+                                                    You need to attend the next 4 classes to reach 75%.
+                                                </span>
+                                            </div>
+                                            <button className="text-link" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                Plan Recovery <ArrowRight size={14} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <p style={{
-                                        fontSize: '13px',
-                                        color: '#dc2626',
-                                        marginTop: '12px',
-                                        fontWeight: '500'
-                                    }}>
-                                        ⚠ You need to attend more classes to reach 75%
-                                    </p>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 };
 

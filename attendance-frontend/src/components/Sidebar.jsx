@@ -10,7 +10,9 @@ import {
     Users,
     Settings,
     LogOut,
-    CheckSquare
+    UserCheck,
+    Bell,
+    ShieldCheck
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -24,7 +26,7 @@ const Sidebar = () => {
 
     const studentLinks = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/student/attendance', icon: Calendar, label: 'Attendance' },
+        { to: '/student/attendance', icon: UserCheck, label: 'Attendance' },
         { to: '/student/courses', icon: BookOpen, label: 'Courses' },
         { to: '/student/shortage', icon: AlertTriangle, label: 'Shortage Alerts' },
         { to: '/student/reports', icon: FileText, label: 'Reports' },
@@ -32,17 +34,17 @@ const Sidebar = () => {
 
     const facultyLinks = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/mark-attendance', icon: CheckSquare, label: 'Mark Attendance' },
+        { to: '/mark-attendance', icon: UserCheck, label: 'Mark Attendance' },
         { to: '/faculty/courses', icon: BookOpen, label: 'My Courses' },
-        { to: '/faculty/history', icon: Calendar, label: 'History' },
+        { to: '/faculty/history', icon: Calendar, label: 'Session History' },
     ];
 
     const adminLinks = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/admin/users', icon: Users, label: 'User Management' },
-        { to: '/admin/courses', icon: BookOpen, label: 'Courses' },
-        { to: '/admin/threshold', icon: Settings, label: 'Thresholds' },
-        { to: '/admin/reports', icon: FileText, label: 'Reports' },
+        { to: '/admin/courses', icon: BookOpen, label: 'Course Directory' },
+        { to: '/admin/threshold', icon: ShieldCheck, label: 'Policy Settings' },
+        { to: '/admin/reports', icon: FileText, label: 'Analytics' },
     ];
 
     const links = user?.role === 'admin'
@@ -52,24 +54,54 @@ const Sidebar = () => {
             : studentLinks;
 
     return (
-        <div className="sidebar">
-            {/* Logo */}
+        <div className="sidebar" style={{
+            boxShadow: '4px 0 24px -10px rgba(0,0,0,0.05)',
+            zIndex: 50
+        }}>
+            {/* Logo Section */}
             <div style={{
-                padding: '20px 24px',
-                borderBottom: '1px solid #e2e8f0'
+                padding: '32px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
             }}>
-                <h1 style={{
+                <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: '#4f46e5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: '700',
                     fontSize: '18px',
-                    fontWeight: '600',
+                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                }}>
+                    A
+                </div>
+                <h1 style={{
+                    fontSize: '19px',
+                    fontWeight: '700',
                     color: '#0f172a',
                     letterSpacing: '-0.025em'
                 }}>
-                    Attendance
+                    AttendLink
                 </h1>
             </div>
 
-            {/* Navigation */}
-            <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
+            {/* Navigation Section */}
+            <nav style={{ flex: 1, padding: '0 12px', overflowY: 'auto' }}>
+                <p style={{
+                    padding: '0 12px 12px 12px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    color: '#94a3b8',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                }}>
+                    Main Navigation
+                </p>
                 {links.map((link) => {
                     const Icon = link.icon;
                     return (
@@ -80,55 +112,67 @@ const Sidebar = () => {
                             className={({ isActive }) =>
                                 isActive ? 'sidebar-item-active' : 'sidebar-item'
                             }
+                            style={({ isActive }) => ({
+                                marginBottom: '4px',
+                                transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+                                ...(isActive ? {
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                    fontWeight: '600'
+                                } : {})
+                            })}
                         >
-                            <Icon size={18} />
+                            <Icon size={19} />
                             <span>{link.label}</span>
                         </NavLink>
                     );
                 })}
             </nav>
 
-            {/* User Section */}
+            {/* Bottom Section */}
             <div style={{
-                padding: '16px',
-                borderTop: '1px solid #e2e8f0'
+                padding: '16px 12px',
+                borderTop: '1px solid #f1f5f9',
+                backgroundColor: '#f8fafc'
             }}>
                 <NavLink
                     to="/profile"
                     className={({ isActive }) =>
                         isActive ? 'sidebar-item-active' : 'sidebar-item'
                     }
-                    style={{ marginBottom: '8px' }}
+                    style={{ marginBottom: '12px' }}
                 >
-                    <User size={18} />
-                    <span>Profile</span>
+                    <User size={19} />
+                    <span>My Profile</span>
                 </NavLink>
 
+                {/* Profile Widget */}
                 <div style={{
+                    padding: '12px',
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    marginTop: '8px'
+                    gap: '12px'
                 }}>
                     <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '10px',
                         backgroundColor: '#eef2ff',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#4f46e5',
-                        fontWeight: '600',
-                        fontSize: '14px'
+                        fontWeight: '700',
+                        fontSize: '15px'
                     }}>
                         {user?.full_name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{
-                            fontSize: '14px',
-                            fontWeight: '500',
+                            fontSize: '13px',
+                            fontWeight: '600',
                             color: '#0f172a',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -137,9 +181,11 @@ const Sidebar = () => {
                             {user?.full_name}
                         </p>
                         <p style={{
-                            fontSize: '12px',
+                            fontSize: '11px',
                             color: '#64748b',
-                            textTransform: 'capitalize'
+                            textTransform: 'uppercase',
+                            fontWeight: '600',
+                            letterSpacing: '0.025em'
                         }}>
                             {user?.role}
                         </p>
@@ -148,13 +194,18 @@ const Sidebar = () => {
                         onClick={handleLogout}
                         style={{
                             padding: '8px',
-                            color: '#64748b',
+                            color: '#94a3b8',
                             background: 'none',
                             border: 'none',
-                            borderRadius: '6px',
+                            borderRadius: '8px',
                             cursor: 'pointer',
-                            transition: 'all 150ms'
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 200ms'
                         }}
+                        onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'}
+                        onMouseOut={(e) => e.currentTarget.style.color = '#94a3b8'}
                         title="Sign out"
                     >
                         <LogOut size={18} />
