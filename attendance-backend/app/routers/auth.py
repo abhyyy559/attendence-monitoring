@@ -11,8 +11,19 @@ from app.utils.security import verify_password, get_password_hash, create_access
 from app.utils.security import get_current_user
 from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest
 import uuid
+from pydantic import BaseModel
+from app.models.user_settings import UserSettings
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+class NotificationPreferenceRequest(BaseModel):
+    enabled: bool
 
 @router.post("/register", response_model=UserResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -71,6 +82,51 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.put("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not verify_password(payload.old_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Old password is incorrect")
+
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+
+    current_user.password_hash = get_password_hash(payload.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}
+
+
+@router.get("/notifications")
+def get_notification_preference(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.user_id).first()
+    if not settings:
+        return {"enabled": True}
+    return {"enabled": bool(settings.notifications_enabled)}
+
+
+@router.put("/notifications")
+def update_notification_preference(
+    payload: NotificationPreferenceRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.user_id).first()
+    if not settings:
+        settings = UserSettings(user_id=current_user.user_id, notifications_enabled=payload.enabled)
+        db.add(settings)
+    else:
+        settings.notifications_enabled = payload.enabled
+
+    db.commit()
+    return {"message": "Notification preference saved", "enabled": bool(payload.enabled)}
 
 # --- Forgot Password Implementation ---
 # In-memory store for reset tokens: {token: email}

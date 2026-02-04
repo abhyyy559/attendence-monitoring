@@ -11,6 +11,7 @@ const History = () => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -29,11 +30,26 @@ const History = () => {
         if (user) fetchHistory();
     }, [user]);
 
-    const filteredHistory = history.filter(item => {
+    const filteredHistory = history
+        .filter(item => {
         if (filter === 'all') return true;
         if (user.role === 'student') return item.status === filter;
         return true; // Faculty history doesn't have status filter yet in this simple impl
-    });
+        })
+        .filter(item => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            if (user.role === 'student') {
+                return (
+                    (item.course || '').toLowerCase().includes(q) ||
+                    (item.faculty || '').toLowerCase().includes(q)
+                );
+            }
+            return (
+                (item.course_name || '').toLowerCase().includes(q) ||
+                (item.course_code || '').toLowerCase().includes(q)
+            );
+        });
 
     if (loading) {
         return (
@@ -70,6 +86,17 @@ const History = () => {
                                 {s}
                             </button>
                         ))}
+                    </div>
+                    <div style={{ position: 'relative', width: '280px' }}>
+                        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                        <input
+                            type="text"
+                            placeholder={user.role === 'student' ? 'Search course/faculty...' : 'Search course/code...'}
+                            className="input-field"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ padding: '8px 12px 8px 36px', width: '100%', fontSize: '13px' }}
+                        />
                     </div>
                 </div>
 

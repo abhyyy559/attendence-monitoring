@@ -1,9 +1,71 @@
 import { useAuth } from '../context/AuthContext';
 import { Mail, Phone, Building, Shield, Settings, Key, Bell, User as UserIcon, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import api from '../services/api';
+import { toast } from 'react-toastify';
 
 const Profile = () => {
     const { user, logout } = useAuth();
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [savingPassword, setSavingPassword] = useState(false);
+
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [savingNotifications, setSavingNotifications] = useState(false);
+
+    useEffect(() => {
+        const loadPrefs = async () => {
+            try {
+                const res = await api.get('/api/auth/notifications');
+                setNotificationsEnabled(!!res.data.enabled);
+            } catch {
+                // Keep default true
+            }
+        };
+        loadPrefs();
+    }, []);
+
+    const submitPasswordChange = async (e) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            toast.error("New password and confirm password do not match");
+            return;
+        }
+        setSavingPassword(true);
+        try {
+            await api.put('/api/auth/change-password', {
+                old_password: oldPassword,
+                new_password: newPassword
+            });
+            toast.success("Password updated");
+            setOldPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setShowPasswordForm(false);
+        } catch (err) {
+            toast.error(err.response?.data?.detail || "Failed to update password");
+        } finally {
+            setSavingPassword(false);
+        }
+    };
+
+    const toggleNotifications = async (enabled) => {
+        setNotificationsEnabled(enabled);
+        setSavingNotifications(true);
+        try {
+            await api.put('/api/auth/notifications', { enabled });
+            toast.success("Notification preference saved");
+        } catch (err) {
+            toast.error(err.response?.data?.detail || "Failed to save preference");
+            setNotificationsEnabled(!enabled); // revert on failure
+        } finally {
+            setSavingNotifications(false);
+        }
+    };
 
     return (
         <motion.div
@@ -101,20 +163,68 @@ const Profile = () => {
                             <h3 className="card-title">Security & Preferences</h3>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <button className="btn-secondary" style={{ width: '100%', justifyContent: 'space-between' }}>
+                            <button
+                                className="btn-secondary"
+                                style={{ width: '100%', justifyContent: 'space-between' }}
+                                onClick={() => { setShowPasswordForm(v => !v); setShowNotifications(false); }}
+                            >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <Key size={18} />
                                     <span>Change Access Password</span>
                                 </div>
                                 <ChevronRight size={16} />
                             </button>
-                            <button className="btn-secondary" style={{ width: '100%', justifyContent: 'space-between' }}>
+                            {showPasswordForm && (
+                                <form onSubmit={submitPasswordChange} className="card" style={{ padding: '16px', backgroundColor: '#f8fafc' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        <div>
+                                            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>OLD PASSWORD</label>
+                                            <input type="password" className="input-field" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>NEW PASSWORD</label>
+                                            <input type="password" className="input-field" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>CONFIRM NEW PASSWORD</label>
+                                            <input type="password" className="input-field" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                                        </div>
+                                        <button className="btn-primary" type="submit" disabled={savingPassword}>
+                                            {savingPassword ? 'Saving...' : 'Update Password'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            <button
+                                className="btn-secondary"
+                                style={{ width: '100%', justifyContent: 'space-between' }}
+                                onClick={() => { setShowNotifications(v => !v); setShowPasswordForm(false); }}
+                            >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <Bell size={18} />
                                     <span>Notification Control</span>
                                 </div>
                                 <ChevronRight size={16} />
                             </button>
+                            {showNotifications && (
+                                <div className="card" style={{ padding: '16px', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '700', color: '#0f172a', fontSize: '13px' }}>Enable Notifications</p>
+                                        <p style={{ fontSize: '12px', color: '#64748b' }}>Turn alerts and reminders on/off.</p>
+                                    </div>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={notificationsEnabled}
+                                            disabled={savingNotifications}
+                                            onChange={(e) => toggleNotifications(e.target.checked)}
+                                            style={{ width: '18px', height: '18px' }}
+                                        />
+                                        <span style={{ fontSize: '12px', color: '#64748b' }}>{notificationsEnabled ? 'On' : 'Off'}</span>
+                                    </label>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

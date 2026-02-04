@@ -11,6 +11,7 @@ const StudentAttendance = () => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [downloading, setDownloading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -46,9 +47,17 @@ const StudentAttendance = () => {
         }
     };
 
-    const filteredData = attendance.filter(item =>
-        filter === 'all' ? true : item.status === filter
-    );
+    const filteredData = attendance
+        .filter(item => (filter === 'all' ? true : item.status === filter))
+        .filter(item => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            return (
+                (item.course || '').toLowerCase().includes(q) ||
+                (item.faculty || '').toLowerCase().includes(q) ||
+                (item.date || '').toLowerCase().includes(q)
+            );
+        });
 
     if (loading) {
         return (
@@ -124,9 +133,22 @@ const StudentAttendance = () => {
                             </button>
                         ))}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '13px' }}>
-                        <Filter size={16} />
-                        Showing {filteredData.length} records
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ position: 'relative', width: '260px' }}>
+                            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <input
+                                type="text"
+                                placeholder="Search course/faculty/date..."
+                                className="input-field"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{ padding: '8px 12px 8px 36px', width: '100%', fontSize: '13px' }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '13px' }}>
+                            <Filter size={16} />
+                            Showing {filteredData.length} records
+                        </div>
                     </div>
                 </div>
 

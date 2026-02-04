@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
 import sys
+from sqlalchemy import text
 from app.routers import auth, courses, attendance, dashboard, faculty, student, reports, notifications
 from app.database import engine, Base
 from app.models.user import User
@@ -11,9 +12,46 @@ from app.models.faculty import Faculty
 from app.models.course import Course, CourseEnrollment
 from app.models.attendance import AttendanceRecord, AttendanceSummary, ShortageThreshold, ShortageReport
 from app.models.notification import Notification
+from app.models.user_settings import UserSettings
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+# Patch/normalize Postgres trigger functions (older DBs may have mismatched definitions)
+try:
+    if engine.url.get_backend_name() not in ["sqlite"]:
+        with engine.begin() as conn:
+            # Ensure the shortage notification trigger function matches our schema.
+            conn.execute(text("""
+CREATE OR REPLACE FUNCTION notify_shortage()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_user_id UUID;
+    v_course_name VARCHAR(255);
+BEGIN
+    SELECT u.user_id, c.course_name INTO v_user_id, v_course_name
+    FROM course_enrollments ce
+    JOIN students s ON ce.student_id = s.student_id
+    JOIN users u ON s.user_id = u.user_id
+    JOIN courses c ON ce.course_id = c.course_id
+    WHERE ce.enrollment_id = NEW.enrollment_id;
+
+    INSERT INTO notifications (user_id, title, message, type)
+    VALUES (
+        v_user_id,
+        'Attendance Shortage Alert',
+        FORMAT('Your attendance in %s is %.2f%%, which is below the required threshold.',
+               v_course_name, NEW.attendance_percentage),
+        'shortage_alert'
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+            """))
+except Exception as e:
+    # Don't block app startup if DB doesn't support these objects (e.g. sqlite)
+    print(f"WARNING: trigger patch skipped/failed: {e}")
 
 app = FastAPI(title="Attendance Monitoring System")
 

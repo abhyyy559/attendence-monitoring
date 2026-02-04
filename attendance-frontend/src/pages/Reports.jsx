@@ -10,10 +10,7 @@ const Reports = () => {
     const [loading, setLoading] = useState(false);
     const [courses, setCourses] = useState([]);
     const [studentData, setStudentData] = useState(null);
-    const [recentDownloads] = useState([
-        { name: 'Semester_Attendance.pdf', size: '1.2 MB', date: 'Just now' },
-        { name: 'Shortage_Audit_Log.xlsx', size: '420 KB', date: '2 hours ago' },
-    ]);
+    const [recentDownloads, setRecentDownloads] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState('all');
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
@@ -27,7 +24,11 @@ const Reports = () => {
                     const res = await api.get('/api/students/dashboard');
                     setStudentData(res.data);
                 }
-            } catch (e) { }
+                // No download-history endpoint in this build; keep list local-only.
+                setRecentDownloads([]);
+            } catch (e) {
+                console.error("Error loading context:", e);
+            }
         };
         if (user) loadContext();
     }, [user]);
@@ -35,6 +36,7 @@ const Reports = () => {
     const handleDownload = async (type, format) => {
         setLoading(true);
         try {
+            console.log("Download clicked", { type, format });
             let endpoint = '';
             let filename = '';
 
@@ -66,8 +68,18 @@ const Reports = () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            toast.success("Report generated effectively!");
+            
+            // Add to recent downloads
+            const newDownload = {
+                name: filename,
+                size: `${(response.data.size / 1024).toFixed(1)} KB`,
+                date: 'Just now'
+            };
+            setRecentDownloads(prev => [newDownload, ...prev].slice(0, 5)); // Keep last 5
+            
+            toast.success("Report generated successfully!");
         } catch (error) {
+            console.error("Download error:", error);
             toast.error("Failed to generate report");
         } finally {
             setLoading(false);
@@ -129,9 +141,9 @@ const Reports = () => {
                     <h1 className="page-title">Reporting Center</h1>
                     <p className="page-subtitle">Configure, generate and export unified attendance records.</p>
                 </div>
-                <button className="btn-primary">
+                <button className="btn-primary" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
                     <Calendar size={18} />
-                    Schedule Export
+                    Schedule Export (Coming soon)
                 </button>
             </div>
 
@@ -253,30 +265,36 @@ const Reports = () => {
                             <h2 className="card-title">Recent Downloads</h2>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-                            {recentDownloads.map((dl, i) => (
-                                <div key={i} style={{
-                                    padding: '12px',
-                                    backgroundColor: '#f8fafc',
-                                    border: '1px solid #edf2f7',
-                                    borderRadius: '10px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '4px'
-                                }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <p style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>{dl.name}</p>
-                                        <FileSpreadsheet size={14} style={{ color: '#94a3b8' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>{dl.size}</span>
-                                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>{dl.date}</span>
-                                    </div>
+                            {recentDownloads.length === 0 ? (
+                                <div style={{ padding: '24px', textAlign: 'center' }}>
+                                    <FileSpreadsheet size={32} style={{ color: '#cbd5e1', margin: '0 auto 12px' }} />
+                                    <p style={{ fontSize: '13px', color: '#94a3b8' }}>No downloads yet</p>
+                                    <p style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px' }}>Generated reports will appear here</p>
                                 </div>
-                            ))}
+                            ) : (
+                                recentDownloads.map((dl, i) => (
+                                    <div key={i} style={{
+                                        padding: '12px',
+                                        backgroundColor: '#f8fafc',
+                                        border: '1px solid #edf2f7',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '4px'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <p style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>{dl.name}</p>
+                                            <FileSpreadsheet size={14} style={{ color: '#94a3b8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>{dl.size}</span>
+                                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>{dl.date}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
-                        <button className="text-link" style={{ fontSize: '12px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            View full download history <ArrowRight size={12} />
-                        </button>
+                        {/* Removed non-functional 'View full download history' link */}
                     </div>
 
                     <div className="card" style={{
@@ -285,7 +303,9 @@ const Reports = () => {
                     }}>
                         <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>Custom Parameters</h3>
                         <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '20px' }}>Need a specific dataset? Use our advanced query builder.</p>
-                        <button className="btn-secondary" style={{ width: '100%', fontSize: '12px' }}>Open Query Builder</button>
+                        <button className="btn-secondary" disabled style={{ width: '100%', fontSize: '12px', opacity: 0.6, cursor: 'not-allowed' }}>
+                            Open Query Builder (Coming soon)
+                        </button>
                     </div>
                 </div>
             </div>

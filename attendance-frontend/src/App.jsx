@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
+import FacultyCourseManagement from './pages/FacultyCourseManagement';
 import AdminDashboard from './pages/AdminDashboard';
 import MarkAttendance from './pages/MarkAttendance';
 import History from './pages/History';
@@ -83,7 +84,7 @@ function App() {
           } />
           <Route path="/faculty/courses" element={
             <PrivateRoute>
-              <FacultyDashboard />
+              <FacultyCourseManagement />
             </PrivateRoute>
           } />
           <Route path="/faculty/history" element={

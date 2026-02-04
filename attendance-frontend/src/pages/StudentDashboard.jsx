@@ -76,6 +76,33 @@ const StudentDashboard = () => {
                 </div>
             </div>
 
+            {/* PHASE 5: Shortage Warning Banner */}
+            {alerts.length > 0 && (
+                <div style={{
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    border: '1px solid #fecaca',
+                    backgroundColor: '#fff1f2',
+                    color: '#9f1239',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <AlertTriangle size={18} />
+                        <div>
+                            <p style={{ fontWeight: '800', fontSize: '13px' }}>
+                                ⚠️ Alert: Your attendance is below 75% in {alerts[0].course_name}.
+                            </p>
+                            <p style={{ fontSize: '12px', opacity: 0.9 }}>
+                                Current: {alerts[0].percentage}% ({alerts.length} course{alerts.length > 1 ? 's' : ''} flagged)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Top Row: Big Stat Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                 {/* Overall Attendance */}
@@ -243,7 +270,7 @@ const StudentDashboard = () => {
                             </div>
                             <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                                 <p style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Academic Year</p>
-                                <p style={{ fontSize: '14px', fontWeight: '700', marginTop: '4px' }}>2023-2024</p>
+                                <p style={{ fontSize: '14px', fontWeight: '700', marginTop: '4px' }}>{data?.academic_year || '—'}</p>
                             </div>
                         </div>
                     </div>

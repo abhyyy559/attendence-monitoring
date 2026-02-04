@@ -13,6 +13,29 @@ from sqlalchemy.orm import aliased
 
 router = APIRouter(prefix="/api/students", tags=["Students"])
 
+
+@router.get("")
+def list_students(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    List all students for faculty/admin so they can enroll them into courses.
+    """
+    if current_user.role not in ["faculty", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    students = db.query(Student, User.full_name, User.email).join(User, Student.user_id == User.user_id).all()
+    return [
+        {
+            "student_id": str(s.Student.student_id),
+            "user_id": str(s.Student.user_id),
+            "roll_number": s.Student.roll_number,
+            "full_name": s.full_name,
+            "email": s.email,
+            "department": s.Student.department,
+            "semester": s.Student.semester,
+        }
+        for s in students
+    ]
+
 @router.get("/dashboard")
 def get_student_dashboard(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
@@ -29,8 +52,8 @@ def get_student_dashboard(db: Session = Depends(get_db), current_user: User = De
             "student_info": {"roll_number": "N/A", "department": "N/A", "semester": 0}
         }
         
-    # Query attendance_summary
-    summaries = db.query(AttendanceSummary, Course).join(
+    # Query attendance_summary + enrollment (to surface academic_year)
+    summaries = db.query(AttendanceSummary, Course, CourseEnrollment).join(
         CourseEnrollment, AttendanceSummary.enrollment_id == CourseEnrollment.enrollment_id
     ).join(
         Course, CourseEnrollment.course_id == Course.course_id
@@ -39,27 +62,38 @@ def get_student_dashboard(db: Session = Depends(get_db), current_user: User = De
     courses_data = []
     total_weighted_percentage = 0
     
-    for summary, course in summaries:
+    academic_years = set()
+
+    for summary, course, enrollment in summaries:
+        if enrollment.academic_year:
+            academic_years.add(enrollment.academic_year)
         courses_data.append({
             "course_name": course.course_name,
             "course_code": course.course_code,
             "percentage": float(summary.attendance_percentage),
             "shortage": summary.shortage_status,
             "total_classes": summary.total_classes,
-            "attended": summary.classes_attended + summary.classes_late
+            "attended": summary.classes_attended + summary.classes_late,
+            "academic_year": enrollment.academic_year,
         })
         total_weighted_percentage += summary.attendance_percentage
         
     overall_percentage = (total_weighted_percentage / len(summaries)) if summaries else 0
     
+    # Prefer a real academic year if present; otherwise compute a sensible default
+    now_year = datetime.date.today().year
+    default_academic_year = f"{now_year}-{now_year + 1}"
+
     return {
         "overall_percentage": round(overall_percentage, 2),
         "courses": courses_data,
         "student_info": {
+            "full_name": current_user.full_name,
             "roll_number": student.roll_number,
             "department": student.department,
             "semester": student.semester
         },
+        "academic_year": next(iter(sorted(academic_years)), default_academic_year),
         "student_id": student.student_id
     }
 

@@ -9,12 +9,8 @@ import api from '../services/api';
 const FacultyDashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isSendingReminder, setIsSendingReminder] = useState(false);
-    const [newCourse, setNewCourse] = useState({ course_code: '', course_name: '', department: '', credits: 3, semester: 1, room_number: '', syllabus_link: '' });
-    const [editingCourse, setEditingCourse] = useState(null);
     const [enrollData, setEnrollData] = useState({ roll_number: '', course_id: '' });
 
     const fetchData = async () => {
@@ -22,9 +18,6 @@ const FacultyDashboard = () => {
         try {
             const response = await api.get('/api/dashboard/faculty');
             setData(response.data);
-            if (response.data.faculty_info?.department) {
-                setNewCourse(prev => ({ ...prev, department: response.data.faculty_info.department }));
-            }
         } catch (error) {
             console.error("Error fetching faculty data", error);
         } finally {
@@ -36,17 +29,6 @@ const FacultyDashboard = () => {
         fetchData();
     }, []);
 
-    const handleCreateCourse = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/api/faculty/courses', newCourse);
-            toast.success("Course created successfully!");
-            setIsCreateModalOpen(false);
-            fetchData();
-        } catch (error) {
-            toast.error(error.response?.data?.detail || "Failed to create course");
-        }
-    };
 
     const handleEnrollStudent = async (e) => {
         e.preventDefault();
@@ -61,28 +43,6 @@ const FacultyDashboard = () => {
         }
     };
 
-    const handleDeleteCourse = async (id) => {
-        if (!window.confirm("Are you sure? This will delete all course data.")) return;
-        try {
-            await api.delete(`/api/faculty/courses/${id}`);
-            toast.success("Course deleted");
-            fetchData();
-        } catch (error) {
-            toast.error("Deletion failed");
-        }
-    };
-
-    const handleEditCourse = async (e) => {
-        e.preventDefault();
-        try {
-            await api.put(`/api/faculty/courses/${editingCourse.course_id}`, editingCourse);
-            toast.success("Course updated!");
-            setIsEditModalOpen(false);
-            fetchData();
-        } catch (error) {
-            toast.error("Update failed");
-        }
-    };
 
     const handleQuickMark = async (courseId) => {
         if (!window.confirm("This will mark ALL enrolled students as PRESENT for today. Proceed?")) return;
@@ -211,13 +171,13 @@ const FacultyDashboard = () => {
                         <h2 className="card-title">Quick Actions</h2>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginTop: '20px' }}>
-                        <button onClick={() => setIsCreateModalOpen(true)} className="dropdown-item" style={{ backgroundColor: '#f8fafc', padding: '16px' }}>
+                        <Link to="/faculty/courses" className="dropdown-item" style={{ backgroundColor: '#f8fafc', padding: '16px', textDecoration: 'none' }}>
                             <div className="dropdown-icon-wrapper" style={{ backgroundColor: '#eef2ff', color: '#4f46e5' }}><PlusCircle size={20} /></div>
                             <div style={{ textAlign: 'left' }}>
-                                <p style={{ fontWeight: '700', fontSize: '13px' }}>Create Course</p>
-                                <p style={{ fontSize: '11px', color: '#64748b' }}>Add new academic subject</p>
+                                <p style={{ fontWeight: '700', fontSize: '13px' }}>Manage Courses</p>
+                                <p style={{ fontSize: '11px', color: '#64748b' }}>View and create courses</p>
                             </div>
-                        </button>
+                        </Link>
                         <button onClick={() => { setIsEnrollModalOpen(true); }} className="dropdown-item" style={{ backgroundColor: '#f8fafc', padding: '16px' }}>
                             <div className="dropdown-icon-wrapper" style={{ backgroundColor: '#ecfdf5', color: '#10b981' }}><UserPlus size={20} /></div>
                             <div style={{ textAlign: 'left' }}>
@@ -248,121 +208,23 @@ const FacultyDashboard = () => {
                 </div>
             </div>
 
-            {/* Courses Management Table */}
-            <div className="card">
-                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 className="card-title">Course Management Center</h2>
-                    <span className="badge-info">{courses.length} Active Courses</span>
-                </div>
-                <div className="table-container" style={{ border: 'none', boxShadow: 'none', marginTop: '12px' }}>
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Identity</th>
-                                <th>Students</th>
-                                <th>Performance</th>
-                                <th style={{ textAlign: 'right' }}>Management</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {courses.map((course, idx) => (
-                                <tr key={idx}>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px', color: '#475569' }}>
-                                                {course.course_code.substring(0, 2)}
-                                            </div>
-                                            <div>
-                                                <p style={{ fontWeight: '700', fontSize: '14px' }}>{course.course_name}</p>
-                                                <p style={{ fontSize: '12px', color: '#64748b' }}>{course.course_code}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <p style={{ fontWeight: '700', fontSize: '14px' }}>{course.student_count}</p>
-                                        <p style={{ fontSize: '11px', color: '#64748b' }}>Enrolled</p>
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div className="progress-bar" style={{ width: '80px' }}>
-                                                <div className="progress-bar-fill" style={{ width: `${course.avg_attendance}%`, backgroundColor: course.avg_attendance < 75 ? '#f43f5e' : '#10b981' }} />
-                                            </div>
-                                            <span style={{ fontSize: '12px', fontWeight: '700' }}>{course.avg_attendance}%</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                                            <button
-                                                title="Quick Mark All Present"
-                                                onClick={() => handleQuickMark(course.course_id)}
-                                                className="btn-secondary" style={{ padding: '6px 10px', fontSize: '11px', color: '#059669' }}
-                                            >
-                                                <Zap size={14} />
-                                            </button>
-                                            <button
-                                                title="Edit Course Metadata"
-                                                onClick={() => { setEditingCourse(data.courses.find(c => c.course_id === course.course_id)); setIsEditModalOpen(true); }}
-                                                className="btn-secondary" style={{ padding: '6px 10px', fontSize: '11px' }}
-                                            >
-                                                <Edit3 size={14} />
-                                            </button>
-                                            <Link to={`/mark-attendance?course=${course.course_id}`} className="btn-primary" style={{ padding: '6px 10px', fontSize: '11px' }}>Verify</Link>
-                                            <button onClick={() => handleDeleteCourse(course.course_id)} className="btn-secondary" style={{ padding: '6px 10px', fontSize: '11px', color: '#f43f5e' }}>
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+            {/* Quick Course Overview Link */}
+            <div className="card" style={{ textAlign: 'center', padding: '32px' }}>
+                <BookOpen size={48} style={{ color: '#4f46e5', margin: '0 auto 16px', opacity: 0.7 }} />
+                <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>
+                    Manage Your Courses
+                </h2>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>
+                    View, create, and manage all your course offerings
+                </p>
+                <Link to="/faculty/courses" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={18} />
+                    Go to My Courses
+                </Link>
             </div>
 
             {/* Modals */}
             <AnimatePresence>
-                {isCreateModalOpen && (
-                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="card" style={{ width: '100%', maxWidth: '480px' }}>
-                            <h2 className="card-title" style={{ fontSize: '20px', marginBottom: '20px' }}>Create New Course</h2>
-                            <form onSubmit={handleCreateCourse} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                <div>
-                                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>COURSE CODE</label>
-                                    <input required value={newCourse.course_code} onChange={e => setNewCourse({ ...newCourse, course_code: e.target.value })} className="input-field" placeholder="e.g. CS-101" />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>COURSE NAME</label>
-                                    <input required value={newCourse.course_name} onChange={e => setNewCourse({ ...newCourse, course_name: e.target.value })} className="input-field" placeholder="e.g. Data Structures" />
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>SEMESTER</label>
-                                        <input type="number" required value={newCourse.semester} onChange={e => setNewCourse({ ...newCourse, semester: e.target.value })} className="input-field" />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>CREDITS</label>
-                                        <input type="number" required value={newCourse.credits} onChange={e => setNewCourse({ ...newCourse, credits: e.target.value })} className="input-field" />
-                                    </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}><MapPin size={12} /> ROOM NUMBER</label>
-                                        <input value={newCourse.room_number} onChange={e => setNewCourse({ ...newCourse, room_number: e.target.value })} className="input-field" placeholder="e.g. 402-B" />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}><Link2 size={12} /> SYLLABUS URL</label>
-                                        <input value={newCourse.syllabus_link} onChange={e => setNewCourse({ ...newCourse, syllabus_link: e.target.value })} className="input-field" placeholder="https://..." />
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                                    <button type="button" onClick={() => setIsCreateModalOpen(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                                    <button type="submit" className="btn-primary" style={{ flex: 1 }}>Create Course</button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
-
                 {isEnrollModalOpen && (
                     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="card" style={{ width: '100%', maxWidth: '400px' }}>
@@ -388,36 +250,6 @@ const FacultyDashboard = () => {
                     </div>
                 )}
 
-                {isEditModalOpen && editingCourse && (
-                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="card" style={{ width: '100%', maxWidth: '480px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <h2 className="card-title" style={{ fontSize: '20px' }}>Modify Course</h2>
-                                <span className="badge-info">{editingCourse.course_code}</span>
-                            </div>
-                            <form onSubmit={handleEditCourse} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                <div>
-                                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>COURSE NAME</label>
-                                    <input required value={editingCourse.course_name} onChange={e => setEditingCourse({ ...editingCourse, course_name: e.target.value })} className="input-field" />
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>ROOM</label>
-                                        <input value={editingCourse.room_number || ''} onChange={e => setEditingCourse({ ...editingCourse, room_number: e.target.value })} className="input-field" />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>SYLLABUS URL</label>
-                                        <input value={editingCourse.syllabus_link || ''} onChange={e => setEditingCourse({ ...editingCourse, syllabus_link: e.target.value })} className="input-field" />
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                                    <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn-secondary" style={{ flex: 1 }}>Discard</button>
-                                    <button type="submit" className="btn-primary" style={{ flex: 1 }}>Apply Changes</button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
             </AnimatePresence>
         </motion.div>
     );

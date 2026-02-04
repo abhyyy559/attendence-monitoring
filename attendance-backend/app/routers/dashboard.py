@@ -54,7 +54,8 @@ def get_student_dashboard(db: Session = Depends(get_db), current_user: User = De
         overall_total += summary.total_classes
         overall_attended += (summary.classes_attended + summary.classes_late)
         
-    overall_percentage = (overall_attended / overall_total * 100) if overall_total > 0 else 0
+    # Safe division - avoid division by zero
+    overall_percentage = (overall_attended / overall_total * 100) if overall_total > 0 else 0.0
     
     return {
         "overall_percentage": round(overall_percentage, 2),
@@ -95,12 +96,15 @@ def get_faculty_dashboard(db: Session = Depends(get_db), current_user: User = De
         
         courses_data = []
         for course, count, avg_att in courses_query:
+            # Safe handling of None values and division by zero
+            student_count = count or 0
+            avg_attendance = round(float(avg_att or 0), 1) if avg_att is not None else 0.0
             courses_data.append({
                 "course_id": str(course.course_id),
                 "course_name": course.course_name,
                 "course_code": course.course_code,
-                "student_count": count,
-                "avg_attendance": round(float(avg_att or 0), 1)
+                "student_count": student_count,
+                "avg_attendance": avg_attendance
             })
         
         # Daily activity trend
@@ -116,7 +120,14 @@ def get_faculty_dashboard(db: Session = Depends(get_db), current_user: User = De
             AttendanceRecord.class_date >= last_7_days
         ).group_by(AttendanceRecord.class_date).all()
         
-        activity_map = {r.class_date: {"present": int(r.present or 0), "absent": int(r.absent or 0)} for r in activity_records}
+        # Safe handling of None values
+        activity_map = {
+            r.class_date: {
+                "present": int(r.present or 0) if r.present is not None else 0,
+                "absent": int(r.absent or 0) if r.absent is not None else 0
+            } 
+            for r in activity_records
+        }
         
         activity_trend = []
         for i in range(6, -1, -1):
@@ -133,7 +144,8 @@ def get_faculty_dashboard(db: Session = Depends(get_db), current_user: User = De
             "courses": courses_data,
             "stats": {
                 "total_students": sum(c['student_count'] for c in courses_data),
-                "avg_attendance": round(sum(c['avg_attendance'] for c in courses_data) / len(courses_data), 1) if courses_data else 0,
+                # Safe division - avoid division by zero
+                "avg_attendance": round(sum(c['avg_attendance'] for c in courses_data) / len(courses_data), 1) if len(courses_data) > 0 else 0.0,
                 "total_courses": len(courses_data)
             },
             "daily_activity": activity_trend
@@ -166,8 +178,8 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: User = Depe
         "course_performance": [
             {
                 "name": code, 
-                "present": round(float(avg_perc), 1), 
-                "absent": round(100 - float(avg_perc), 1)
+                "present": round(float(avg_perc or 0), 1) if avg_perc is not None else 0.0, 
+                "absent": round(max(0, 100 - float(avg_perc or 0)), 1) if avg_perc is not None else 100.0
             } for code, avg_perc in db.query(Course.course_code, func.avg(AttendanceSummary.attendance_percentage))\
                 .join(CourseEnrollment, Course.course_id == CourseEnrollment.course_id)\
                 .join(AttendanceSummary, CourseEnrollment.enrollment_id == AttendanceSummary.enrollment_id)\

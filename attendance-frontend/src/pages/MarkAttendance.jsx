@@ -26,14 +26,16 @@ const MarkAttendance = () => {
     useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const response = await api.get('/api/dashboard/faculty');
-                const fetchedCourses = response.data.courses || [];
+                // Use the faculty courses endpoint which includes all courses in the department
+                const response = await api.get('/api/faculty/courses');
+                const fetchedCourses = response.data || [];
                 setCourses(fetchedCourses);
 
                 if (initialCourseId) {
                     handleCourseSelect(initialCourseId);
                 }
             } catch (error) {
+                console.error("Error fetching courses:", error);
                 toast.error("Failed to load courses");
             } finally {
                 setLoading(false);
