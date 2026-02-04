@@ -82,7 +82,7 @@ const Login = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <label style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>Security Password</label>
-                                <a href="#" style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600', textDecoration: 'none' }}>Forgot Security Key?</a>
+                                <Link to="/forgot-password" style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600', textDecoration: 'none' }}>Forgot Security Key?</Link>
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />

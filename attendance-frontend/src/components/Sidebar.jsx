@@ -26,7 +26,7 @@ const Sidebar = () => {
 
     const studentLinks = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/student/attendance', icon: UserCheck, label: 'Attendance' },
+        { to: '/student/history', icon: UserCheck, label: 'Attendance' },
         { to: '/student/courses', icon: BookOpen, label: 'Courses' },
         { to: '/student/shortage', icon: AlertTriangle, label: 'Shortage Alerts' },
         { to: '/student/reports', icon: FileText, label: 'Reports' },

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { dashboardService } from '../services/api';
+import api, { dashboardService } from '../services/api';
 import { BookOpen, TrendingUp, AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight, User } from 'lucide-react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area
+    AreaChart, Area, BarChart, Bar, Cell
 } from 'recharts';
 import { motion } from 'framer-motion';
 
@@ -11,21 +11,17 @@ const StudentDashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Mock trend data for charts
-    const trendData = [
-        { name: 'Week 1', attendance: 65 },
-        { name: 'Week 2', attendance: 72 },
-        { name: 'Week 3', attendance: 68 },
-        { name: 'Week 4', attendance: 78 },
-        { name: 'Week 5', attendance: 85 },
-        { name: 'Week 6', attendance: 82 },
-    ];
+    const [trendData, setTrendData] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const response = await dashboardService.getStudentData();
                 setData(response.data);
+
+                // Fetch real trend data
+                const trendResponse = await api.get('/api/students/trends');
+                setTrendData(trendResponse.data);
             } catch (error) {
                 console.error("Error fetching student data", error);
             } finally {
@@ -49,6 +45,16 @@ const StudentDashboard = () => {
     const onTrack = courses.filter(c => !c.shortage).length;
     const shortage = courses.filter(c => c.shortage).length;
 
+    // Subject performance data for BarChart
+    const subjectPerformance = courses.map(c => ({
+        name: c.course_code,
+        percentage: c.percentage,
+        fullName: c.course_name
+    })).sort((a, b) => b.percentage - a.percentage);
+
+    // Filter shortage alerts
+    const alerts = courses.filter(c => c.shortage);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -70,167 +76,174 @@ const StudentDashboard = () => {
                 </div>
             </div>
 
-            {/* Main Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: '24px' }}>
-                {/* Highlight Card */}
+            {/* Top Row: Big Stat Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                {/* Overall Attendance */}
                 <div className="card" style={{
                     background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-                    border: 'none',
-                    color: 'white',
-                    position: 'relative',
-                    overflow: 'hidden'
+                    border: 'none', color: 'white', position: 'relative', overflow: 'hidden'
                 }}>
                     <div style={{ position: 'relative', zIndex: 1 }}>
-                        <p style={{ fontSize: '14px', opacity: 0.9, fontWeight: '500' }}>Overall Attendance</p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <p style={{ fontSize: '14px', opacity: 0.9, fontWeight: '600' }}>Overall Attendance</p>
+                            <TrendingUp size={20} style={{ opacity: 0.8 }} />
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '12px' }}>
-                            <span style={{ fontSize: '48px', fontWeight: '700', letterSpacing: '-0.025em' }}>
-                                {overallPercentage}%
-                            </span>
-                            <span className="trend-up" style={{ color: '#a7f3d0', fontSize: '14px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '9999px' }}>
-                                <ArrowUpRight size={14} /> +2.4%
+                            <span style={{ fontSize: '42px', fontWeight: '800' }}>{overallPercentage}%</span>
+                            <span style={{ fontSize: '13px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '12px' }}>
+                                On Track
                             </span>
                         </div>
-                        <p style={{ fontSize: '13px', marginTop: '16px', opacity: 0.9, lineHeight: '1.4' }}>
-                            {overallPercentage >= 75
-                                ? 'You are doing great! Keep it up to stay above the 75% requirement.'
-                                : 'Caution: Your overall attendance is currently below the required threshold.'}
-                        </p>
+                        <p style={{ fontSize: '12px', marginTop: '16px', opacity: 0.8 }}>Requirement: 75% minimum participation</p>
                     </div>
-                    {/* Abstract background shape */}
-                    <div style={{
-                        position: 'absolute', right: '-20px', bottom: '-20px',
-                        width: '120px', height: '120px', borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.1)', filter: 'blur(20px)'
-                    }} />
+                    <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', filter: 'blur(20px)' }} />
                 </div>
 
-                {/* Stat Cards */}
-                <div className="stat-card">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{
-                            width: '44px', height: '44px', borderRadius: '12px',
-                            backgroundColor: '#eef2ff', color: '#4f46e5',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                            <BookOpen size={22} />
+                {/* Shortage Alerts */}
+                <div className="card" style={{
+                    background: shortage > 0 ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none', color: 'white', position: 'relative', overflow: 'hidden'
+                }}>
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <p style={{ fontSize: '14px', opacity: 0.9, fontWeight: '600' }}>Attendance Alerts</p>
+                            <AlertTriangle size={20} style={{ opacity: 0.8 }} />
                         </div>
-                        <div>
-                            <p className="stat-label">Enrolled Courses</p>
-                            <p className="stat-value">{courses.length}</p>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '12px' }}>
+                            <span style={{ fontSize: '42px', fontWeight: '800' }}>{shortage}</span>
+                            <span style={{ fontSize: '13px', opacity: 0.9 }}>Subjects in Red</span>
                         </div>
+                        <p style={{ fontSize: '12px', marginTop: '16px', opacity: 0.8 }}>{shortage > 0 ? 'Urgent action required in some courses' : 'All courses meet minimum requirements'}</p>
                     </div>
                 </div>
 
-                <div className="stat-card">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{
-                            width: '44px', height: '44px', borderRadius: '12px',
-                            backgroundColor: '#ecfdf5', color: '#10b981',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                            <TrendingUp size={22} />
+                {/* Next Predicted Class */}
+                <div className="card" style={{
+                    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                    border: 'none', color: 'white', position: 'relative', overflow: 'hidden'
+                }}>
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <p style={{ fontSize: '14px', opacity: 0.9, fontWeight: '600' }}>Next Scheduled Class</p>
+                            <Calendar size={20} style={{ opacity: 0.8 }} />
                         </div>
-                        <div>
-                            <p className="stat-label">On Track</p>
-                            <p className="stat-value" style={{ color: '#059669' }}>{onTrack}</p>
+                        <div style={{ marginTop: '12px' }}>
+                            <p style={{ fontSize: '20px', fontWeight: '700' }}>Machine Learning</p>
+                            <p style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>CS-402 | 10:30 AM Today</p>
                         </div>
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{
-                            width: '44px', height: '44px', borderRadius: '12px',
-                            backgroundColor: '#fff1f2', color: '#f43f5e',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                            <AlertTriangle size={22} />
-                        </div>
-                        <div>
-                            <p className="stat-label">Shortage Risks</p>
-                            <p className="stat-value" style={{ color: '#e11d48' }}>{shortage}</p>
-                        </div>
+                        <p style={{ fontSize: '12px', marginTop: '16px', color: '#94a3b8' }}>Room: Virtual Lab 102</p>
                     </div>
                 </div>
             </div>
 
-            {/* Chart and Detail Grid */}
+            {/* Middle Section: Analytics Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-                {/* Trend Chart */}
+                {/* Attendance Trend Line Chart */}
                 <div className="card">
                     <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 className="card-title">Attendance Trends</h2>
-                        <select className="input-field" style={{ width: '120px', padding: '4px 8px', fontSize: '12px' }}>
-                            <option>Last 30 days</option>
-                            <option>Last semester</option>
-                        </select>
+                        <h2 className="card-title">Attendance Trend</h2>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#4f46e5', backgroundColor: '#f5f3ff', padding: '4px 8px', borderRadius: '6px' }}>Daily Activity</span>
                     </div>
-                    <div className="chart-container" style={{ height: '260px' }}>
+                    <div style={{ height: '300px', marginTop: '20px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={trendData}>
                                 <defs>
-                                    <linearGradient id="colorAttend" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis
-                                    dataKey="name"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 12, fill: '#64748b' }}
-                                    dy={10}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 12, fill: '#64748b' }}
-                                    domain={[0, 100]}
-                                />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
+                                <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                                 <Tooltip
-                                    contentStyle={{
-                                        borderRadius: '8px',
-                                        border: '1px solid #e2e8f0',
-                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
-                                    }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                    formatter={(value) => [`${value}% Attendance`, 'Status']}
                                 />
-                                <Area
-                                    type="monotone"
-                                    dataKey="attendance"
-                                    stroke="#4f46e5"
-                                    fillOpacity={1}
-                                    fill="url(#colorAttend)"
-                                    strokeWidth={3}
-                                />
+                                <Area type="monotone" dataKey="attendance" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Profile/Quick Info */}
+                {/* Subject Performance Bar Chart */}
                 <div className="card">
                     <div className="card-header">
-                        <h2 className="card-title">My Profile</h2>
+                        <h2 className="card-title">Subject Performance</h2>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', padding: '12px 0' }}>
-                        <div className="avatar-lg" style={{ width: '80px', height: '80px', fontSize: '24px', backgroundColor: '#eef2ff' }}>
-                            {data?.student_info?.full_name?.split(' ').map(n => n[0]).join('') || 'ST'}
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontWeight: '600', fontSize: '18px', color: '#0f172a' }}>
-                                {data?.student_info?.full_name || 'Loading...'}
-                            </p>
-                            <p style={{ fontSize: '14px', color: '#64748b' }}>Roll: {data?.student_info?.roll_number}</p>
-                        </div>
-                        <div style={{ width: '100%', borderTop: '1px solid #f1f5f9', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#64748b', fontSize: '13px' }}>Department</span>
-                                <span style={{ fontWeight: '500', fontSize: '13px' }}>{data?.student_info?.department}</span>
+                    <div style={{ height: '300px', marginTop: '20px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={subjectPerformance} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                <XAxis type="number" domain={[0, 100]} hide />
+                                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: '600' }} />
+                                <Tooltip
+                                    cursor={{ fill: 'transparent' }}
+                                    contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                />
+                                <Bar dataKey="percentage" radius={[0, 4, 4, 0]} barSize={20}>
+                                    {subjectPerformance.map((entry, index) => (
+                                        <Cell key={index} fill={entry.percentage < 75 ? '#f43f5e' : '#4f46e5'} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Row: Alerts and Secondary Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div className="card">
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2 className="card-title">Recent Shortage Alerts</h2>
+                        <span className="pill-badge pill-badge-danger">{alerts.length} Flagged</span>
+                    </div>
+                    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {alerts.length === 0 ? (
+                            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px dashed #22c55e' }}>
+                                <p style={{ fontSize: '13px', color: '#166534', fontWeight: '600' }}>Safe Zone: You have no active shortages.</p>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#64748b', fontSize: '13px' }}>Semester</span>
-                                <span className="badge-info" style={{ padding: '2px 8px' }}>{data?.student_info?.semester}</span>
+                        ) : (
+                            alerts.map((a, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: '#fff1f2', borderRadius: '10px', border: '1px solid #ffe4e6' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '700', fontSize: '13px', color: '#e11d48' }}>{a.course_name}</p>
+                                        <p style={{ fontSize: '11px', color: '#f43f5e' }}>{a.course_code} | Current: {a.percentage}%</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <p style={{ fontSize: '11px', color: '#9f1239', fontWeight: '800' }}>{Math.ceil((0.75 * a.total_classes - a.attended) / (1 - 0.75) || 0)} More</p>
+                                        <p style={{ fontSize: '10px', color: '#fb7185' }}>Classes Required</p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="card">
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2 className="card-title">Curriculum Health</h2>
+                        <span className="pill-badge pill-badge-success">On Track</span>
+                    </div>
+                    <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <div className="avatar-lg" style={{ backgroundColor: '#f1f5f9', color: '#475569', borderRadius: '12px' }}>
+                                <User size={24} />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '15px', fontWeight: '700' }}>{data?.student_info?.full_name}</p>
+                                <p style={{ fontSize: '12px', color: '#64748b' }}>{data?.student_info?.department} | Semester {data?.student_info?.semester}</p>
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                <p style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Roll No</p>
+                                <p style={{ fontSize: '14px', fontWeight: '700', marginTop: '4px' }}>{data?.student_info?.roll_number}</p>
+                            </div>
+                            <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                <p style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Academic Year</p>
+                                <p style={{ fontSize: '14px', fontWeight: '700', marginTop: '4px' }}>2023-2024</p>
                             </div>
                         </div>
                     </div>

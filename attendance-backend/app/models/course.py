@@ -13,6 +13,8 @@ class Course(Base):
     department = Column(String(100), nullable=False)
     semester = Column(Integer, nullable=False)
     credits = Column(Integer, nullable=False)
+    room_number = Column(String(50), nullable=True)
+    syllabus_link = Column(String(500), nullable=True)
     total_classes = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

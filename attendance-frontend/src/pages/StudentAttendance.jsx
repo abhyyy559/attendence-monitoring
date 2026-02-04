@@ -2,31 +2,49 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Calendar, CheckCircle, XCircle, Clock, Search, Filter, Download, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { downloadFile } from '../utils/download';
+import { toast } from 'react-toastify';
 
 const StudentAttendance = () => {
     const [attendance, setAttendance] = useState([]);
+    const [studentId, setStudentId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [downloading, setDownloading] = useState(false);
 
     useEffect(() => {
-        const fetchAttendance = async () => {
+        const fetchData = async () => {
             try {
-                // Mocking data for visual demonstration
-                const mockData = [
-                    { id: 1, date: '2024-02-03', course: 'Computer Science 101', status: 'present', faculty: 'Dr. Smith' },
-                    { id: 2, date: '2024-02-02', course: 'Mathematics II', status: 'absent', faculty: 'Prof. Johnson' },
-                    { id: 3, date: '2024-02-01', course: 'Physics Lab', status: 'late', faculty: 'Dr. Lee' },
-                    { id: 4, date: '2024-01-31', course: 'Computer Science 101', status: 'present', faculty: 'Dr. Smith' },
-                ];
-                setAttendance(mockData);
+                // Fetch student info to get studentId
+                const dashResponse = await api.get('/api/students/dashboard');
+                setStudentId(dashResponse.data.student_id);
+
+                // Fetch attendance records
+                const response = await api.get('/api/students/attendance');
+                setAttendance(response.data);
             } catch (error) {
-                console.error(error);
+                console.error("Failed to fetch attendance:", error);
+                toast.error("Could not sync your records.");
             } finally {
                 setLoading(false);
             }
         };
-        fetchAttendance();
+        fetchData();
     }, []);
+
+    const handleDownload = async (type) => {
+        if (!studentId) return;
+        setDownloading(type);
+        try {
+            const filename = `attendance_report_${new Date().toISOString().split('T')[0]}.${type === 'pdf' ? 'pdf' : 'xlsx'}`;
+            await downloadFile(`/api/reports/download/${type}/${studentId}`, filename);
+            toast.success(`${type.toUpperCase()} report generated successfully.`);
+        } catch (error) {
+            toast.error(`Failed to generate ${type.toUpperCase()} report.`);
+        } finally {
+            setDownloading(false);
+        }
+    };
 
     const filteredData = attendance.filter(item =>
         filter === 'all' ? true : item.status === filter
@@ -54,13 +72,21 @@ const StudentAttendance = () => {
                     <p className="page-subtitle">Chronological record of your academic presence.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn-secondary">
+                    <button
+                        className="btn-secondary"
+                        onClick={() => handleDownload('excel')}
+                        disabled={downloading === 'excel'}
+                    >
                         <Download size={18} />
-                        Export Log
+                        {downloading === 'excel' ? 'Generating...' : 'Export Excel'}
                     </button>
-                    <button className="btn-primary">
-                        <Calendar size={18} />
-                        Calendar View
+                    <button
+                        className="btn-primary"
+                        onClick={() => handleDownload('pdf')}
+                        disabled={downloading === 'pdf'}
+                    >
+                        <Download size={18} />
+                        {downloading === 'pdf' ? 'Generating...' : 'Download PDF'}
                     </button>
                 </div>
             </div>
@@ -107,8 +133,8 @@ const StudentAttendance = () => {
                 {filteredData.length === 0 ? (
                     <div className="card empty-state" style={{ border: 'none' }}>
                         <div className="empty-state-icon"><Calendar size={32} /></div>
-                        <h3 style={{ fontWeight: '600', color: '#1e293b' }}>No records in this category</h3>
-                        <p style={{ fontSize: '14px', color: '#64748b' }}>Try changing the filters or check back later.</p>
+                        <h3 style={{ fontWeight: '600', color: '#1e293b' }}>No records found</h3>
+                        <p style={{ fontSize: '14px', color: '#64748b' }}>Your attendance activity will appear here once sessions are synchronized.</p>
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
@@ -146,13 +172,13 @@ const StudentAttendance = () => {
                                             <td>
                                                 <div>
                                                     <p style={{ fontWeight: '600', color: '#0f172a' }}>{record.course}</p>
-                                                    <p style={{ fontSize: '12px', color: '#94a3b8' }}>Regular Lecture</p>
+                                                    <p style={{ fontSize: '12px', color: '#94a3b8' }}>Verified Session</p>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div className="avatar" style={{ width: '24px', height: '24px', fontSize: '10px', border: 'none' }}>
-                                                        {record.faculty.charAt(record.faculty.indexOf(' ') + 1)}
+                                                    <div className="avatar" style={{ width: '24px', height: '24px', fontSize: '10px', border: 'none', backgroundColor: '#e2e8f0', color: '#475569' }}>
+                                                        {record.faculty.split(' ').map(n => n[0]).join('')}
                                                     </div>
                                                     <span style={{ fontSize: '14px', color: '#64748b' }}>{record.faculty}</span>
                                                 </div>
@@ -172,12 +198,6 @@ const StudentAttendance = () => {
                         </table>
                     </div>
                 )}
-
-                <div style={{ padding: '24px', borderTop: '1px solid #edf2f7', display: 'flex', justifyContent: 'center' }}>
-                    <button className="text-link" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        Load More Entries <ArrowRight size={16} />
-                    </button>
-                </div>
             </div>
         </motion.div>
     );

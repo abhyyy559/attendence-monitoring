@@ -9,11 +9,13 @@ import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import MarkAttendance from './pages/MarkAttendance';
-import StudentAttendance from './pages/StudentAttendance';
+import History from './pages/History';
 import StudentCourses from './pages/StudentCourses';
 import ShortageAlerts from './pages/ShortageAlerts';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Layout from './components/Layout';
 
 const PrivateRoute = ({ children }) => {
@@ -41,6 +43,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           {/* Dashboard */}
           <Route path="/" element={
@@ -50,9 +54,9 @@ function App() {
           } />
 
           {/* Student Routes */}
-          <Route path="/student/attendance" element={
+          <Route path="/student/history" element={
             <PrivateRoute>
-              <StudentAttendance />
+              <History />
             </PrivateRoute>
           } />
           <Route path="/student/courses" element={
@@ -84,7 +88,7 @@ function App() {
           } />
           <Route path="/faculty/history" element={
             <PrivateRoute>
-              <Reports />
+              <History />
             </PrivateRoute>
           } />
 

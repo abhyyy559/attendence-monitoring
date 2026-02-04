@@ -17,20 +17,8 @@ const AdminDashboard = () => {
 
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6'];
 
-    // Mock Chart Data
-    const deptAttendance = [
-        { name: 'Computer Science', value: 450, percentage: 88 },
-        { name: 'Mechanical', value: 380, percentage: 76 },
-        { name: 'Electrical', value: 300, percentage: 82 },
-        { name: 'Civil', value: 250, percentage: 68 },
-    ];
-
-    const coursePerformance = [
-        { name: 'CS101', present: 85, absent: 15 },
-        { name: 'ME202', present: 70, absent: 30 },
-        { name: 'EE303', present: 92, absent: 8 },
-        { name: 'CI104', present: 65, absent: 35 },
-    ];
+    const deptAttendance = data?.dept_distribution || [];
+    const coursePerformance = data?.course_performance || [];
 
     useEffect(() => {
         const fetchData = async () => {

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, case
 from sqlalchemy.orm import Session
+import datetime
 from app.database import get_db
 from app.models.user import User
 from app.models.student import Student
@@ -99,3 +101,41 @@ def get_student_attendance(db: Session = Depends(get_db), current_user: User = D
         })
     
     return attendance_list
+
+@router.get("/trends")
+def get_attendance_trends(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Not a student")
+    
+    student = db.query(Student).filter(Student.user_id == current_user.user_id).first()
+    if not student:
+        return []
+    
+    enrollments = db.query(CourseEnrollment).filter(CourseEnrollment.student_id == student.student_id).all()
+    enrollment_ids = [e.enrollment_id for e in enrollments]
+    
+    trends = []
+    today = datetime.date.today()
+    for i in range(29, -1, -1):
+        target_date = today - datetime.timedelta(days=i)
+        
+        counts = db.query(
+            func.count(AttendanceRecord.attendance_id).label("total"),
+            func.sum(case((AttendanceRecord.status == "present", 1), else_=0)).label("present"),
+            func.sum(case((AttendanceRecord.status == "late", 1), else_=0)).label("late")
+        ).filter(
+            AttendanceRecord.enrollment_id.in_(enrollment_ids),
+            AttendanceRecord.class_date == target_date
+        ).first()
+        
+        total = counts.total or 0
+        present = (counts.present or 0) + (counts.late or 0)
+        percentage = round((present / total * 100), 1) if total > 0 else 0
+        
+        trends.append({
+            "name": target_date.strftime("%b %d"),
+            "attendance": percentage,
+            "fullDate": target_date.isoformat()
+        })
+        
+    return trends

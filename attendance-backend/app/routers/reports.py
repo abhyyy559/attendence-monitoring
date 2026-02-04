@@ -12,6 +12,7 @@ from openpyxl.styles import Font, Alignment
 from app.database import get_db
 from app.models.student import Student
 from app.models.user import User
+from app.models.faculty import Faculty
 from app.models.attendance import AttendanceRecord, AttendanceSummary
 from app.models.course import CourseEnrollment, Course
 from app.utils.security import get_current_user
@@ -146,3 +147,41 @@ async def download_attendance_excel(student_id: str, db: Session = Depends(get_d
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename=attendance_{student.roll_number}.xlsx"}
     )
+
+@router.get("/faculty/shortage-audit")
+async def shortage_audit(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["faculty", "admin"]:
+        raise HTTPException(status_code=403, detail="Faculty only")
+    
+    # Get all students with shortage in any course
+    shortages = db.query(AttendanceSummary, Student.roll_number, User.full_name, Course.course_name, Course.course_code)\
+        .join(CourseEnrollment, AttendanceSummary.enrollment_id == CourseEnrollment.enrollment_id)\
+        .join(Student, CourseEnrollment.student_id == Student.student_id)\
+        .join(User, Student.user_id == User.user_id)\
+        .join(Course, CourseEnrollment.course_id == Course.course_id)\
+        .filter(AttendanceSummary.percentage < 75).all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Shortage Audit"
+    
+    ws["A1"] = "Attendance Shortage Audit Report"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws["A2"] = f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d')}"
+    
+    headers = ["Roll Number", "Student Name", "Course Code", "Course Name", "Attendance %"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col, value=h)
+        cell.font = Font(bold=True)
+        
+    for idx, (sum, roll, name, c_name, c_code) in enumerate(shortages, 5):
+        ws.cell(row=idx, column=1, value=roll)
+        ws.cell(row=idx, column=2, value=name)
+        ws.cell(row=idx, column=3, value=c_code)
+        ws.cell(row=idx, column=4, value=c_name)
+        ws.cell(row=idx, column=5, value=f"{sum.percentage:.2f}%")
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=shortage_audit.xlsx"})

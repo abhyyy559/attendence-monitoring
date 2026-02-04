@@ -1,7 +1,79 @@
 import { FileText, Download, Calendar, BarChart3, PieChart as PieChartIcon, ArrowRight, Clock, FileSpreadsheet } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const Reports = () => {
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [studentData, setStudentData] = useState(null);
+    const [recentDownloads] = useState([
+        { name: 'Semester_Attendance.pdf', size: '1.2 MB', date: 'Just now' },
+        { name: 'Shortage_Audit_Log.xlsx', size: '420 KB', date: '2 hours ago' },
+    ]);
+    const [selectedCourse, setSelectedCourse] = useState('all');
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+    useEffect(() => {
+        const loadContext = async () => {
+            try {
+                if (user?.role === 'faculty') {
+                    const res = await api.get('/api/faculty/courses');
+                    setCourses(res.data);
+                } else if (user?.role === 'student') {
+                    const res = await api.get('/api/students/dashboard');
+                    setStudentData(res.data);
+                }
+            } catch (e) { }
+        };
+        if (user) loadContext();
+    }, [user]);
+
+    const handleDownload = async (type, format) => {
+        setLoading(true);
+        try {
+            let endpoint = '';
+            let filename = '';
+
+            if (user.role === 'student') {
+                const sId = studentData?.student_id;
+                if (!sId) {
+                    toast.error("Profile not synced. Try again in a moment.");
+                    setLoading(false);
+                    return;
+                }
+                endpoint = `/api/reports/download/${format}/${sId}`;
+                filename = `attendance_${studentData.student_info.roll_number}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+            } else if (user.role === 'faculty') {
+                if (type === 'shortage') {
+                    endpoint = '/api/reports/faculty/shortage-audit';
+                    filename = 'shortage_audit.xlsx';
+                } else {
+                    toast.info("Select a course for detailed report");
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            const response = await api.get(endpoint, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Report generated effectively!");
+        } catch (error) {
+            toast.error("Failed to generate report");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const reportCategories = [
         {
             group: 'Academic Performance',
@@ -12,15 +84,19 @@ const Reports = () => {
                     icon: BarChart3,
                     color: '#4f46e5',
                     bg: '#eef2ff',
-                    type: 'PDF / CSV'
+                    type: 'PDF',
+                    format: 'pdf',
+                    showFor: ['student']
                 },
                 {
-                    title: 'Course-wise Analysis',
-                    description: 'Detailed session breakdowns and participation metrics per course.',
-                    icon: PieChartIcon,
+                    title: 'Excel Detailed Logs',
+                    description: 'Raw data export of all marked sessions with timestamps.',
+                    icon: FileSpreadsheet,
                     color: '#10b981',
                     bg: '#ecfdf5',
-                    type: 'PDF'
+                    type: 'Excel',
+                    format: 'excel',
+                    showFor: ['student']
                 }
             ]
         },
@@ -33,15 +109,12 @@ const Reports = () => {
                     icon: FileText,
                     color: '#f59e0b',
                     bg: '#fffbeb',
-                    type: 'Excel'
+                    type: 'Excel',
+                    id: 'shortage',
+                    showFor: ['faculty', 'admin']
                 }
             ]
         }
-    ];
-
-    const recentDownloads = [
-        { name: 'Jan_Attendance_Final.pdf', size: '1.2 MB', date: '2 hours ago' },
-        { name: 'Shortage_List_CS.csv', size: '420 KB', date: 'Yesterday' },
     ];
 
     return (
@@ -62,76 +135,114 @@ const Reports = () => {
                 </button>
             </div>
 
+            {/* Filter Hub for Governance */}
+            {user?.role === 'faculty' && (
+                <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', padding: '24px', borderBottom: '4px solid #4f46e5' }}>
+                    <div>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Course Scope</label>
+                        <select
+                            value={selectedCourse}
+                            onChange={e => setSelectedCourse(e.target.value)}
+                            className="input-field"
+                            style={{ backgroundColor: '#f8fafc' }}
+                        >
+                            <option value="all">Entire Department</option>
+                            {courses.map(c => <option key={c.course_id} value={c.course_id}>{c.course_name} ({c.course_code})</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Date From</label>
+                        <div style={{ position: 'relative' }}>
+                            <input type="date" className="input-field" value={dateRange.start} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ backgroundColor: '#f8fafc' }} />
+                        </div>
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Date To</label>
+                        <input type="date" className="input-field" value={dateRange.end} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} style={{ backgroundColor: '#f8fafc' }} />
+                    </div>
+                </motion.div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
                 {/* Main Reports Area */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                    {reportCategories.map((cat, groupIdx) => (
-                        <div key={cat.group} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <h2 style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                {cat.group}
-                            </h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-                                {cat.items.map((report, idx) => {
-                                    const Icon = report.icon;
-                                    return (
-                                        <motion.div
-                                            key={idx}
-                                            whileHover={{ y: -2 }}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '24px',
-                                                backgroundColor: 'white',
-                                                borderRadius: '16px',
-                                                border: '1px solid #e2e8f0',
-                                                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                                                transition: 'all 200ms'
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                                <div style={{
-                                                    width: '52px',
-                                                    height: '52px',
-                                                    borderRadius: '14px',
-                                                    backgroundColor: report.bg,
+                    {reportCategories.map((cat, groupIdx) => {
+                        const items = cat.items.filter(item => item.showFor.includes(user?.role));
+                        if (items.length === 0) return null;
+
+                        return (
+                            <div key={cat.group} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <h2 style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {cat.group}
+                                </h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+                                    {items.map((report, idx) => {
+                                        const Icon = report.icon;
+                                        return (
+                                            <motion.div
+                                                key={idx}
+                                                whileHover={{ y: -2 }}
+                                                style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: report.color
-                                                }}>
-                                                    <Icon size={26} />
-                                                </div>
-                                                <div style={{ maxWidth: '400px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <p style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px' }}>
-                                                            {report.title}
-                                                        </p>
-                                                        <span className="badge-info" style={{ fontSize: '10px', padding: '2px 6px' }}>{report.type}</span>
+                                                    justifyContent: 'space-between',
+                                                    padding: '24px',
+                                                    backgroundColor: 'white',
+                                                    borderRadius: '16px',
+                                                    border: '1px solid #e2e8f0',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                                                    transition: 'all 200ms'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                                    <div style={{
+                                                        width: '52px',
+                                                        height: '52px',
+                                                        borderRadius: '14px',
+                                                        backgroundColor: report.bg,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: report.color
+                                                    }}>
+                                                        <Icon size={26} />
                                                     </div>
-                                                    <p style={{ fontSize: '13.5px', color: '#64748b', marginTop: '4px', lineHeight: '1.4' }}>
-                                                        {report.description}
-                                                    </p>
+                                                    <div style={{ maxWidth: '400px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <p style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px' }}>
+                                                                {report.title}
+                                                            </p>
+                                                            <span className="badge-info" style={{ fontSize: '10px', padding: '2px 6px' }}>{report.type}</span>
+                                                        </div>
+                                                        <p style={{ fontSize: '13.5px', color: '#64748b', marginTop: '4px', lineHeight: '1.4' }}>
+                                                            {report.description}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <button className="btn-secondary" style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                height: '44px',
-                                                padding: '0 20px',
-                                                borderRadius: '10px',
-                                                backgroundColor: 'white'
-                                            }}>
-                                                <Download size={18} />
-                                                Generate
-                                            </button>
-                                        </motion.div>
-                                    );
-                                })}
+                                                <button
+                                                    onClick={() => handleDownload(report.id, report.format)}
+                                                    disabled={loading}
+                                                    className="btn-secondary"
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        height: '44px',
+                                                        padding: '0 20px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: 'white'
+                                                    }}
+                                                >
+                                                    <Download size={18} />
+                                                    {loading ? 'Processing...' : 'Generate'}
+                                                </button>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Sidebar Context */}

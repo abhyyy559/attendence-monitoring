@@ -9,9 +9,20 @@ class CourseBase(BaseModel):
     department: str
     semester: int
     credits: int
+    room_number: Optional[str] = None
+    syllabus_link: Optional[str] = None
 
 class CourseCreate(CourseBase):
     pass
+
+class CourseUpdate(BaseModel):
+    course_code: Optional[str] = None
+    course_name: Optional[str] = None
+    department: Optional[str] = None
+    semester: Optional[int] = None
+    credits: Optional[int] = None
+    room_number: Optional[str] = None
+    syllabus_link: Optional[str] = None
 
 class CourseResponse(CourseBase):
     course_id: UUID
@@ -36,3 +47,8 @@ class EnrollmentResponse(EnrollmentBase):
     
     class Config:
         from_attributes = True
+
+class EnrollmentByRollNumber(BaseModel):
+    roll_number: str
+    course_id: UUID
+    academic_year: Optional[str] = "2023-2024"
