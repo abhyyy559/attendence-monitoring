@@ -8,45 +8,90 @@ const Login = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        setIsLoading(true);
         try {
             await login(email, password);
             navigate('/');
         } catch (err) {
             console.error(err);
-            setError('Invalid credentials');
+            setError('Invalid email or password');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
-                <h3 className="text-2xl font-bold text-center mb-4">Login</h3>
-                <form onSubmit={handleSubmit}>
-                    <div className="mt-4">
+        <div className="min-h-screen bg-white flex items-center justify-center p-4">
+            <div className="w-full max-w-sm">
+                {/* Logo / Title */}
+                <div className="text-center mb-8">
+                    <h1 className="text-2xl font-semibold text-gray-900">Attendance System</h1>
+                    <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
+                </div>
+
+                {/* Login Card */}
+                <div className="card">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-gray-700" htmlFor="email">Email</label>
-                            <input type="text" placeholder="Email"
-                                className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Email address
+                            </label>
+                            <input
+                                type="email"
+                                className="input-field"
+                                placeholder="you@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
                         </div>
-                        <div className="mt-4">
-                            <label className="block text-gray-700">Password</label>
-                            <input type="password" placeholder="Password"
-                                className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                value={password} onChange={(e) => setPassword(e.target.value)} required />
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                className="input-field"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
                         </div>
-                        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-                        <div className="flex items-baseline justify-between mt-6">
-                            <button className="w-full px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 transition duration-200">Login</button>
-                        </div>
-                        <div className="mt-4 text-center">
-                            <Link to="/register" className="text-sm text-blue-600 hover:underline">Register an account</Link>
-                        </div>
+
+                        {error && (
+                            <p className="text-sm text-red-600">{error}</p>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="btn-primary w-full"
+                        >
+                            {isLoading ? 'Signing in...' : 'Sign in'}
+                        </button>
+                    </form>
+
+                    <div className="mt-4 text-center">
+                        <Link to="/forgot-password" className="text-sm text-gray-500 hover:text-gray-700">
+                            Forgot password?
+                        </Link>
                     </div>
-                </form>
+                </div>
+
+                {/* Register Link */}
+                <p className="mt-6 text-center text-sm text-gray-500">
+                    Don't have an account?{' '}
+                    <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+                        Register
+                    </Link>
+                </p>
             </div>
         </div>
     );

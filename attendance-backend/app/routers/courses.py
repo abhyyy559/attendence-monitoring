@@ -5,6 +5,7 @@ from uuid import UUID
 from app.database import get_db
 from app.models.course import Course, CourseEnrollment
 from app.models.user import User
+from app.models.student import Student
 from app.schemas.course import CourseCreate, CourseResponse, EnrollmentCreate, EnrollmentResponse
 from app.utils.security import get_current_user
 
@@ -52,3 +53,19 @@ def enroll_student(enrollment: EnrollmentCreate, db: Session = Depends(get_db), 
     db.commit()
     db.refresh(db_enrollment)
     return db_enrollment
+@router.get("/{course_id}/students")
+def get_enrolled_students(course_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Authenticate faculty or admin
+    if current_user.role not in ["faculty", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    students = db.query(Student, User.full_name, Student.roll_number).join(
+        User, Student.user_id == User.user_id
+    ).join(
+        CourseEnrollment, Student.student_id == CourseEnrollment.student_id
+    ).filter(CourseEnrollment.course_id == course_id).all()
+    
+    return [
+        {"student_id": s.Student.student_id, "full_name": s.full_name, "roll_number": s.roll_number}
+        for s in students
+    ]

@@ -14,4 +14,10 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+export const dashboardService = {
+    getStudentData: () => api.get('/api/dashboard/student'),
+    getFacultyData: () => api.get('/api/dashboard/faculty'),
+    getAdminData: () => api.get('/api/dashboard/admin'),
+};
+
 export default api;
